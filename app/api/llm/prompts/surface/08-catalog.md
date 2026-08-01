@@ -1,0 +1,3 @@
+## 组件目录
+{{CATALOG_LINES}}
+{{PROPS_GUIDE}}

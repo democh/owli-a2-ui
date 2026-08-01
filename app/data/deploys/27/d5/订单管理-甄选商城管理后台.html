@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>订单管理 - 甄选商城管理后台 · test</title>
+<style>*{margin:0;padding:0}body{-webkit-font-smoothing:antialiased}button{font-family:inherit}a{font-family:inherit}</style>
+</head>
+<body>
+  <div style="min-height:100vh;width:100%;background:#f4f4f5;color:#09090b;font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;display:flex;flex-direction:column">
+    <div style="display:flex;min-height:100vh">
+      <aside style="width:220px;flex-shrink:0px;background:#fff;border-right:1px solid rgba(0,0,0,0.06);display:flex;flex-direction:column">
+        <div style="height:64px;display:flex;align-items:center;gap:8px;padding:0 20px;border-bottom:1px solid rgba(0,0,0,0.06)">
+          <span style="width:28px;height:28px;border-radius:10px;background:#18181b;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700px;font-size:13px">甄</span>
+          <strong style="color:#09090b">甄选</strong>
+        </div>
+        <nav style="flex:1px;padding:12px;display:flex;flex-direction:column;gap:4px">
+          <a href="#" style="padding:8px 12px;font-size:14px;border-radius:10px;cursor:pointer;text-decoration:none;color:#71717a">仪表盘</a>
+          <a href="#" style="padding:8px 12px;font-size:14px;border-radius:10px;cursor:pointer;text-decoration:none;color:#71717a">商品管理</a>
+          <a href="#" style="padding:8px 12px;font-size:14px;border-radius:10px;cursor:pointer;text-decoration:none;background:#18181b;color:#fff;font-weight:500px">订单管理</a>
+          <a href="#" style="padding:8px 12px;font-size:14px;border-radius:10px;cursor:pointer;text-decoration:none;color:#71717a">客户管理</a>
+          <a href="#" style="padding:8px 12px;font-size:14px;border-radius:10px;cursor:pointer;text-decoration:none;color:#71717a">营销分析</a>
+        </nav>
+      </aside>
+      <main style="flex:1px;min-width:0px;background:#f4f4f5">
+        <div style="height:64px;background:#fff;border-bottom:1px solid rgba(0,0,0,0.06);display:flex;align-items:center;padding:0 24px">
+          <h1 style="font-size:18px;font-weight:600px;color:#09090b;margin:0px">甄选商城</h1>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:stretch;gap:24px">
+          <div style="display:flex;flex-wrap:wrap;width:100%;gap:16px;align-items:center;justify-content:between;padding:0px">
+            <div style="display:contents">
+              <div style="display:flex;flex-direction:column;align-items:stretch;gap:8px">
+                <h1 style="font-size:36px;font-weight:800px;letter-spacing:-0.02em;color:#09090b;margin:0px;white-space:pre-line">订单管理</h1>
+                <p style="margin:0px;white-space:pre-line;font-size:14px;color:#71717a">共 12,847 条订单</p>
+              </div>
+            </div>
+            <div style="display:contents">
+              <button style="display:inline-flex;align-items:center;gap:6px;font-weight:500px;border-radius:10px;padding:8px 16px;font-size:14px;cursor:pointer;border:1px solid rgba(0,0,0,0.12);width:fit-content;background:#fff;color:#09090b">
+                <span style="font-size:15px;line-height:1;display:inline-flex;flex-shrink:0px">↓</span>
+                <span>导出订单</span>
+              </button>
+            </div>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;width:100%;gap:16px;align-items:flex-start;justify-content:flex-start;padding:0px">
+            <div style="display:contents">
+              <select style="width:100%;padding:10px 14px;font-size:14px;border-radius:10px;border:1px solid rgba(0,0,0,0.1);background:#fff;color:#09090b;box-sizing:border-box;outline:none">
+                <option>全部状态</option>
+                <option>待付款</option>
+                <option>待发货</option>
+                <option>已完成</option>
+                <option>已退款</option>
+              </select>
+            </div>
+            <div style="display:contents">
+              <select style="width:100%;padding:10px 14px;font-size:14px;border-radius:10px;border:1px solid rgba(0,0,0,0.1);background:#fff;color:#09090b;box-sizing:border-box;outline:none">
+                <option>全部支付方式</option>
+                <option>微信支付</option>
+                <option>支付宝</option>
+                <option>银行卡</option>
+              </select>
+            </div>
+            <div style="display:contents">
+              <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:10px;border:1px solid rgba(0,0,0,0.1);background:#fff;width:240px;box-sizing:border-box">
+                <span style="font-size:16px;line-height:1;display:inline-flex;flex-shrink:0px;color:#71717a">⌕</span>
+                <input placeholder="搜索订单号 / 客户" readonly="true" style="flex:1px;font-size:14px;border:none;outline:none;background:transparent;color:#09090b;min-width:0px"/>
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;gap:4px;border-bottom:1px solid rgba(0,0,0,0.08)">
+            <button style="padding:10px 16px;font-size:14px;background:none;border:none;cursor:pointer;border-bottom:2px solid #18181b;color:#09090b;font-weight:500px;margin-bottom:-1px">全部订单</button>
+            <button style="padding:10px 16px;font-size:14px;background:none;border:none;cursor:pointer;border-bottom:2px solid transparent;color:#71717a;font-weight:400px;margin-bottom:-1px">待付款</button>
+            <button style="padding:10px 16px;font-size:14px;background:none;border:none;cursor:pointer;border-bottom:2px solid transparent;color:#71717a;font-weight:400px;margin-bottom:-1px">待发货</button>
+            <button style="padding:10px 16px;font-size:14px;background:none;border:none;cursor:pointer;border-bottom:2px solid transparent;color:#71717a;font-weight:400px;margin-bottom:-1px">已完成</button>
+            <button style="padding:10px 16px;font-size:14px;background:none;border:none;cursor:pointer;border-bottom:2px solid transparent;color:#71717a;font-weight:400px;margin-bottom:-1px">已退款</button>
+          </div>
+          <div style="padding:12px 16px;font-size:14px;border-radius:10px;background:#fffbeb;color:#92400e;border:1px solid #fde68a">
+            <strong>退款申请</strong>
+            <span> 有 5 笔退款申请等待处理，请及时审核</span>
+          </div>
+          <div style="background:#fff;border-radius:10px;border:1px solid rgba(0,0,0,0.06);box-shadow:0 1px 3px rgba(0,0,0,0.05);padding:24px">
+            <div style="font-weight:600px;font-size:15px;color:#09090b;margin-bottom:12px">订单列表</div>
+            <div style="display:flex;flex-direction:column;gap:12px">
+              <div style="width:100%;overflow-x:auto">
+                <table style="width:100%;font-size:14px;border-collapse:collapse">
+                  <thead>
+                    <tr style="border-bottom:1px solid rgba(0,0,0,0.07)">
+                      <th style="text-align:left;font-weight:500px;color:#71717a;padding:10px 12px;white-space:nowrap">订单号</th>
+                      <th style="text-align:left;font-weight:500px;color:#71717a;padding:10px 12px;white-space:nowrap">客户</th>
+                      <th style="text-align:left;font-weight:500px;color:#71717a;padding:10px 12px;white-space:nowrap">商品</th>
+                      <th style="text-align:left;font-weight:500px;color:#71717a;padding:10px 12px;white-space:nowrap">金额</th>
+                      <th style="text-align:left;font-weight:500px;color:#71717a;padding:10px 12px;white-space:nowrap">状态</th>
+                      <th style="text-align:left;font-weight:500px;color:#71717a;padding:10px 12px;white-space:nowrap">下单时间</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr style="border-bottom:1px solid rgba(0,0,0,0.04)">
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">#20241101</td>
+                      <td style="padding:12px;white-space:nowrap">
+                        <span style="display:flex;align-items:center;gap:10px">
+                          <span style="width:28px;height:28px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600px;color:#fff;background:linear-gradient(135deg,#f093fb,#f5576c)">陈</span>
+                          <span style="color:#09090b">陈静</span>
+                        </span>
+                      </td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">云雾绿茶 ×2</td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">¥256</td>
+                      <td style="padding:12px;white-space:nowrap">
+                        <span style="padding:2px 8px;border-radius:999px;font-size:12px;font-weight:500px;background:#f0fdf4;color:#15803d">已完成</span>
+                      </td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">2024-11-01 10:23</td>
+                    </tr>
+                    <tr style="border-bottom:1px solid rgba(0,0,0,0.04)">
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">#20241102</td>
+                      <td style="padding:12px;white-space:nowrap">
+                        <span style="display:flex;align-items:center;gap:10px">
+                          <span style="width:28px;height:28px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600px;color:#fff;background:linear-gradient(135deg,#f093fb,#f5576c)">李</span>
+                          <span style="color:#09090b">李伟</span>
+                        </span>
+                      </td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">无线耳机 Pro ×1</td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">¥1,499</td>
+                      <td style="padding:12px;white-space:nowrap">
+                        <span style="padding:2px 8px;border-radius:999px;font-size:12px;font-weight:500px;background:#fffbeb;color:#b45309">待发货</span>
+                      </td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">2024-11-01 11:02</td>
+                    </tr>
+                    <tr style="border-bottom:1px solid rgba(0,0,0,0.04)">
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">#20241103</td>
+                      <td style="padding:12px;white-space:nowrap">
+                        <span style="display:flex;align-items:center;gap:10px">
+                          <span style="width:28px;height:28px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600px;color:#fff;background:linear-gradient(135deg,#667eea,#764ba2)">王</span>
+                          <span style="color:#09090b">王芳</span>
+                        </span>
+                      </td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">保温杯 ×3</td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">¥297</td>
+                      <td style="padding:12px;white-space:nowrap">
+                        <span style="padding:2px 8px;border-radius:999px;font-size:12px;font-weight:500px;background:#fffbeb;color:#b45309">待付款</span>
+                      </td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">2024-11-01 11:45</td>
+                    </tr>
+                    <tr style="border-bottom:1px solid rgba(0,0,0,0.04)">
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">#20241104</td>
+                      <td style="padding:12px;white-space:nowrap">
+                        <span style="display:flex;align-items:center;gap:10px">
+                          <span style="width:28px;height:28px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600px;color:#fff;background:linear-gradient(135deg,#4facfe,#00f2fe)">张</span>
+                          <span style="color:#09090b">张强</span>
+                        </span>
+                      </td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">手冲咖啡壶 ×1</td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">¥268</td>
+                      <td style="padding:12px;white-space:nowrap">
+                        <span style="padding:2px 8px;border-radius:999px;font-size:12px;font-weight:500px;background:#f0fdf4;color:#15803d">已完成</span>
+                      </td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">2024-11-01 12:11</td>
+                    </tr>
+                    <tr style="border-bottom:1px solid rgba(0,0,0,0.04)">
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">#20241105</td>
+                      <td style="padding:12px;white-space:nowrap">
+                        <span style="display:flex;align-items:center;gap:10px">
+                          <span style="width:28px;height:28px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600px;color:#fff;background:linear-gradient(135deg,#43e97b,#38f9d7)">刘</span>
+                          <span style="color:#09090b">刘洋</span>
+                        </span>
+                      </td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">真丝围巾 ×2</td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">¥396</td>
+                      <td style="padding:12px;white-space:nowrap">
+                        <span style="padding:2px 8px;border-radius:999px;font-size:12px;font-weight:500px;background:#fef2f2;color:#dc2626">已退款</span>
+                      </td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">2024-11-01 12:58</td>
+                    </tr>
+                    <tr style="border-bottom:1px solid rgba(0,0,0,0.04)">
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">#20241106</td>
+                      <td style="padding:12px;white-space:nowrap">
+                        <span style="display:flex;align-items:center;gap:10px">
+                          <span style="width:28px;height:28px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600px;color:#fff;background:linear-gradient(135deg,#4facfe,#00f2fe)">赵</span>
+                          <span style="color:#09090b">赵敏</span>
+                        </span>
+                      </td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">机械键盘 ×1</td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">¥429</td>
+                      <td style="padding:12px;white-space:nowrap">
+                        <span style="padding:2px 8px;border-radius:999px;font-size:12px;font-weight:500px;background:#fffbeb;color:#b45309">待发货</span>
+                      </td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">2024-11-01 13:20</td>
+                    </tr>
+                    <tr style="border-bottom:1px solid rgba(0,0,0,0.04)">
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">#20241107</td>
+                      <td style="padding:12px;white-space:nowrap">
+                        <span style="display:flex;align-items:center;gap:10px">
+                          <span style="width:28px;height:28px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600px;color:#fff;background:linear-gradient(135deg,#f093fb,#f5576c)">孙</span>
+                          <span style="color:#09090b">孙磊</span>
+                        </span>
+                      </td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">智能门锁 ×1</td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">¥899</td>
+                      <td style="padding:12px;white-space:nowrap">
+                        <span style="padding:2px 8px;border-radius:999px;font-size:12px;font-weight:500px;background:#f0fdf4;color:#15803d">已完成</span>
+                      </td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">2024-11-01 14:05</td>
+                    </tr>
+                    <tr style="border-bottom:1px solid rgba(0,0,0,0.04)">
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">#20241108</td>
+                      <td style="padding:12px;white-space:nowrap">
+                        <span style="display:flex;align-items:center;gap:10px">
+                          <span style="width:28px;height:28px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600px;color:#fff;background:linear-gradient(135deg,#667eea,#764ba2)">周</span>
+                          <span style="color:#09090b">周芸</span>
+                        </span>
+                      </td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">运动手环 ×2</td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">¥398</td>
+                      <td style="padding:12px;white-space:nowrap">
+                        <span style="padding:2px 8px;border-radius:999px;font-size:12px;font-weight:500px;background:#fffbeb;color:#b45309">待付款</span>
+                      </td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">2024-11-01 14:37</td>
+                    </tr>
+                    <tr style="border-bottom:1px solid rgba(0,0,0,0.04)">
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">#20241109</td>
+                      <td style="padding:12px;white-space:nowrap">
+                        <span style="display:flex;align-items:center;gap:10px">
+                          <span style="width:28px;height:28px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600px;color:#fff;background:linear-gradient(135deg,#a8edea,#fed6e3)">吴</span>
+                          <span style="color:#09090b">吴昊</span>
+                        </span>
+                      </td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">便携榨汁杯 ×1</td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">¥79</td>
+                      <td style="padding:12px;white-space:nowrap">
+                        <span style="padding:2px 8px;border-radius:999px;font-size:12px;font-weight:500px;background:#f0fdf4;color:#15803d">已完成</span>
+                      </td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">2024-11-01 15:19</td>
+                    </tr>
+                    <tr style="border-bottom:1px solid rgba(0,0,0,0.04)">
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">#20241110</td>
+                      <td style="padding:12px;white-space:nowrap">
+                        <span style="display:flex;align-items:center;gap:10px">
+                          <span style="width:28px;height:28px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600px;color:#fff;background:linear-gradient(135deg,#fa709a,#fee140)">郑</span>
+                          <span style="color:#09090b">郑爽</span>
+                        </span>
+                      </td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">保温杯 ×1</td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">¥99</td>
+                      <td style="padding:12px;white-space:nowrap">
+                        <span style="padding:2px 8px;border-radius:999px;font-size:12px;font-weight:500px;background:#fffbeb;color:#b45309">待发货</span>
+                      </td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">2024-11-01 16:02</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+<nav style="position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:99;display:flex;gap:4px;background:rgba(20,20,25,0.85);backdrop-filter:blur(8px);padding:6px;border-radius:999px;box-shadow:0 8px 30px rgba(0,0,0,0.25)"><a href="数据中心-甄选商城管理后台.html" style="padding:6px 14px;border-radius:999px;font-size:12px;text-decoration:none;color:rgba(255,255,255,0.75)">数据中心 - 甄选商城管理后台</a><a href="商品管理-甄选商城管理后台.html" style="padding:6px 14px;border-radius:999px;font-size:12px;text-decoration:none;color:rgba(255,255,255,0.75)">商品管理 - 甄选商城管理后台</a><a href="订单管理-甄选商城管理后台.html" style="padding:6px 14px;border-radius:999px;font-size:12px;text-decoration:none;background:#fff;color:#111;font-weight:600">订单管理 - 甄选商城管理后台</a><a href="客户管理-甄选商城管理后台.html" style="padding:6px 14px;border-radius:999px;font-size:12px;text-decoration:none;color:rgba(255,255,255,0.75)">客户管理 - 甄选商城管理后台</a><a href="营销分析-甄选商城管理后台.html" style="padding:6px 14px;border-radius:999px;font-size:12px;text-decoration:none;color:rgba(255,255,255,0.75)">营销分析 - 甄选商城管理后台</a></nav>
+</body>
+</html>

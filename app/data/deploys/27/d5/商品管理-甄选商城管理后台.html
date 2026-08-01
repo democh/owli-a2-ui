@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>商品管理 - 甄选商城管理后台 · test</title>
+<style>*{margin:0;padding:0}body{-webkit-font-smoothing:antialiased}button{font-family:inherit}a{font-family:inherit}</style>
+</head>
+<body>
+  <div style="min-height:100vh;width:100%;background:#f4f4f5;color:#09090b;font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;display:flex;flex-direction:column">
+    <div style="display:flex;min-height:100vh">
+      <aside style="width:220px;flex-shrink:0px;background:#fff;border-right:1px solid rgba(0,0,0,0.06);display:flex;flex-direction:column">
+        <div style="height:64px;display:flex;align-items:center;gap:8px;padding:0 20px;border-bottom:1px solid rgba(0,0,0,0.06)">
+          <span style="width:28px;height:28px;border-radius:10px;background:#18181b;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700px;font-size:13px">甄</span>
+          <strong style="color:#09090b">甄选</strong>
+        </div>
+        <nav style="flex:1px;padding:12px;display:flex;flex-direction:column;gap:4px">
+          <a href="#" style="padding:8px 12px;font-size:14px;border-radius:10px;cursor:pointer;text-decoration:none;color:#71717a">仪表盘</a>
+          <a href="#" style="padding:8px 12px;font-size:14px;border-radius:10px;cursor:pointer;text-decoration:none;background:#18181b;color:#fff;font-weight:500px">商品管理</a>
+          <a href="#" style="padding:8px 12px;font-size:14px;border-radius:10px;cursor:pointer;text-decoration:none;color:#71717a">订单管理</a>
+          <a href="#" style="padding:8px 12px;font-size:14px;border-radius:10px;cursor:pointer;text-decoration:none;color:#71717a">客户管理</a>
+          <a href="#" style="padding:8px 12px;font-size:14px;border-radius:10px;cursor:pointer;text-decoration:none;color:#71717a">营销分析</a>
+        </nav>
+      </aside>
+      <main style="flex:1px;min-width:0px;background:#f4f4f5">
+        <div style="height:64px;background:#fff;border-bottom:1px solid rgba(0,0,0,0.06);display:flex;align-items:center;padding:0 24px">
+          <h1 style="font-size:18px;font-weight:600px;color:#09090b;margin:0px">甄选商城</h1>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:stretch;gap:24px">
+          <div style="display:flex;flex-wrap:wrap;width:100%;gap:16px;align-items:center;justify-content:between;padding:0px">
+            <div style="display:contents">
+              <div style="display:flex;flex-direction:column;align-items:stretch;gap:8px">
+                <h1 style="font-size:36px;font-weight:800px;letter-spacing:-0.02em;color:#09090b;margin:0px;white-space:pre-line">商品管理</h1>
+                <p style="margin:0px;white-space:pre-line;font-size:14px;color:#71717a">共 1,249 件商品</p>
+              </div>
+            </div>
+            <div style="display:contents">
+              <button style="display:inline-flex;align-items:center;gap:6px;font-weight:500px;border-radius:10px;padding:8px 16px;font-size:14px;cursor:pointer;border:none;width:fit-content;background:#18181b;color:#fff;box-shadow:0 1px 2px rgba(0,0,0,0.08)">
+                <span style="font-size:15px;line-height:1;display:inline-flex;flex-shrink:0px">+</span>
+                <span>新增商品</span>
+              </button>
+            </div>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;width:100%;gap:16px;align-items:flex-start;justify-content:flex-start;padding:0px">
+            <div style="display:contents">
+              <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:10px;border:1px solid rgba(0,0,0,0.1);background:#fff;width:280px;box-sizing:border-box">
+                <span style="font-size:16px;line-height:1;display:inline-flex;flex-shrink:0px;color:#71717a">⌕</span>
+                <input placeholder="搜索商品名称 / SKU" readonly="true" style="flex:1px;font-size:14px;border:none;outline:none;background:transparent;color:#09090b;min-width:0px"/>
+              </div>
+            </div>
+            <div style="display:contents">
+              <select style="width:100%;padding:10px 14px;font-size:14px;border-radius:10px;border:1px solid rgba(0,0,0,0.1);background:#fff;color:#09090b;box-sizing:border-box;outline:none">
+                <option>全部状态</option>
+                <option>在售</option>
+                <option>待上架</option>
+                <option>已下架</option>
+              </select>
+            </div>
+          </div>
+          <div style="padding:12px 16px;font-size:14px;border-radius:10px;background:#fffbeb;color:#92400e;border:1px solid #fde68a">
+            <strong>库存预警</strong>
+            <span> 有 12 件商品库存低于安全值，建议及时补货</span>
+          </div>
+          <div style="background:#fff;border-radius:10px;border:1px solid rgba(0,0,0,0.06);box-shadow:0 1px 3px rgba(0,0,0,0.05);padding:24px">
+            <div style="font-weight:600px;font-size:15px;color:#09090b;margin-bottom:12px">商品列表</div>
+            <div style="display:flex;flex-direction:column;gap:12px">
+              <div style="width:100%;overflow-x:auto">
+                <table style="width:100%;font-size:14px;border-collapse:collapse">
+                  <thead>
+                    <tr style="border-bottom:1px solid rgba(0,0,0,0.07)">
+                      <th style="text-align:left;font-weight:500px;color:#71717a;padding:10px 12px;white-space:nowrap">商品</th>
+                      <th style="text-align:left;font-weight:500px;color:#71717a;padding:10px 12px;white-space:nowrap">SKU</th>
+                      <th style="text-align:left;font-weight:500px;color:#71717a;padding:10px 12px;white-space:nowrap">价格</th>
+                      <th style="text-align:left;font-weight:500px;color:#71717a;padding:10px 12px;white-space:nowrap">库存</th>
+                      <th style="text-align:left;font-weight:500px;color:#71717a;padding:10px 12px;white-space:nowrap">销量</th>
+                      <th style="text-align:left;font-weight:500px;color:#71717a;padding:10px 12px;white-space:nowrap">状态</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr style="border-bottom:1px solid rgba(0,0,0,0.04)">
+                      <td style="padding:12px;white-space:nowrap">
+                        <span style="display:flex;align-items:center;gap:10px">
+                          <span style="width:28px;height:28px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600px;color:#fff;background:linear-gradient(135deg,#4facfe,#00f2fe)">云</span>
+                          <span style="color:#09090b">云雾绿茶 250g</span>
+                        </span>
+                      </td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">YL-001</td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">¥128</td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">320</td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">1,204</td>
+                      <td style="padding:12px;white-space:nowrap">
+                        <span style="padding:2px 8px;border-radius:999px;font-size:12px;font-weight:500px;background:rgba(0,0,0,0.05);color:#71717a">在售</span>
+                      </td>
+                    </tr>
+                    <tr style="border-bottom:1px solid rgba(0,0,0,0.04)">
+                      <td style="padding:12px;white-space:nowrap">
+                        <span style="display:flex;align-items:center;gap:10px">
+                          <span style="width:28px;height:28px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600px;color:#fff;background:linear-gradient(135deg,#ff9a9e,#fecfef)">手</span>
+                          <span style="color:#09090b">手冲咖啡壶 600ml</span>
+                        </span>
+                      </td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">KF-102</td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">¥268</td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">56</td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">890</td>
+                      <td style="padding:12px;white-space:nowrap">
+                        <span style="padding:2px 8px;border-radius:999px;font-size:12px;font-weight:500px;background:rgba(0,0,0,0.05);color:#71717a">在售</span>
+                      </td>
+                    </tr>
+                    <tr style="border-bottom:1px solid rgba(0,0,0,0.04)">
+                      <td style="padding:12px;white-space:nowrap">
+                        <span style="display:flex;align-items:center;gap:10px">
+                          <span style="width:28px;height:28px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600px;color:#fff;background:linear-gradient(135deg,#4facfe,#00f2fe)">保</span>
+                          <span style="color:#09090b">保温杯 不锈钢</span>
+                        </span>
+                      </td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">BW-204</td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">¥99</td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">0</td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">2,301</td>
+                      <td style="padding:12px;white-space:nowrap">
+                        <span style="padding:2px 8px;border-radius:999px;font-size:12px;font-weight:500px;background:rgba(0,0,0,0.05);color:#71717a">已下架</span>
+                      </td>
+                    </tr>
+                    <tr style="border-bottom:1px solid rgba(0,0,0,0.04)">
+                      <td style="padding:12px;white-space:nowrap">
+                        <span style="display:flex;align-items:center;gap:10px">
+                          <span style="width:28px;height:28px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600px;color:#fff;background:linear-gradient(135deg,#ff9a9e,#fecfef)">真</span>
+                          <span style="color:#09090b">真丝围巾 印花</span>
+                        </span>
+                      </td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">SZ-311</td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">¥198</td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">128</td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">445</td>
+                      <td style="padding:12px;white-space:nowrap">
+                        <span style="padding:2px 8px;border-radius:999px;font-size:12px;font-weight:500px;background:rgba(0,0,0,0.05);color:#71717a">在售</span>
+                      </td>
+                    </tr>
+                    <tr style="border-bottom:1px solid rgba(0,0,0,0.04)">
+                      <td style="padding:12px;white-space:nowrap">
+                        <span style="display:flex;align-items:center;gap:10px">
+                          <span style="width:28px;height:28px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600px;color:#fff;background:linear-gradient(135deg,#4facfe,#00f2fe)">运</span>
+                          <span style="color:#09090b">运动手环 5代</span>
+                        </span>
+                      </td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">YD-118</td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">¥199</td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">12</td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">876</td>
+                      <td style="padding:12px;white-space:nowrap">
+                        <span style="padding:2px 8px;border-radius:999px;font-size:12px;font-weight:500px;background:#fffbeb;color:#b45309">待上架</span>
+                      </td>
+                    </tr>
+                    <tr style="border-bottom:1px solid rgba(0,0,0,0.04)">
+                      <td style="padding:12px;white-space:nowrap">
+                        <span style="display:flex;align-items:center;gap:10px">
+                          <span style="width:28px;height:28px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600px;color:#fff;background:linear-gradient(135deg,#30cfd0,#330867)">无</span>
+                          <span style="color:#09090b">无线耳机 Pro</span>
+                        </span>
+                      </td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">WX-010</td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">¥1,499</td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">87</td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">1,932</td>
+                      <td style="padding:12px;white-space:nowrap">
+                        <span style="padding:2px 8px;border-radius:999px;font-size:12px;font-weight:500px;background:rgba(0,0,0,0.05);color:#71717a">在售</span>
+                      </td>
+                    </tr>
+                    <tr style="border-bottom:1px solid rgba(0,0,0,0.04)">
+                      <td style="padding:12px;white-space:nowrap">
+                        <span style="display:flex;align-items:center;gap:10px">
+                          <span style="width:28px;height:28px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600px;color:#fff;background:linear-gradient(135deg,#ff9a9e,#fecfef)">机</span>
+                          <span style="color:#09090b">机械键盘 87键</span>
+                        </span>
+                      </td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">JP-087</td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">¥429</td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">0</td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">3,102</td>
+                      <td style="padding:12px;white-space:nowrap">
+                        <span style="padding:2px 8px;border-radius:999px;font-size:12px;font-weight:500px;background:rgba(0,0,0,0.05);color:#71717a">已下架</span>
+                      </td>
+                    </tr>
+                    <tr style="border-bottom:1px solid rgba(0,0,0,0.04)">
+                      <td style="padding:12px;white-space:nowrap">
+                        <span style="display:flex;align-items:center;gap:10px">
+                          <span style="width:28px;height:28px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600px;color:#fff;background:linear-gradient(135deg,#30cfd0,#330867)">便</span>
+                          <span style="color:#09090b">便携榨汁杯</span>
+                        </span>
+                      </td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">BX-340</td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">¥79</td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">203</td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">678</td>
+                      <td style="padding:12px;white-space:nowrap">
+                        <span style="padding:2px 8px;border-radius:999px;font-size:12px;font-weight:500px;background:rgba(0,0,0,0.05);color:#71717a">在售</span>
+                      </td>
+                    </tr>
+                    <tr style="border-bottom:1px solid rgba(0,0,0,0.04)">
+                      <td style="padding:12px;white-space:nowrap">
+                        <span style="display:flex;align-items:center;gap:10px">
+                          <span style="width:28px;height:28px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600px;color:#fff;background:linear-gradient(135deg,#43e97b,#38f9d7)">智</span>
+                          <span style="color:#09090b">智能门锁 X1</span>
+                        </span>
+                      </td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">ZN-501</td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">¥899</td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">45</td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">324</td>
+                      <td style="padding:12px;white-space:nowrap">
+                        <span style="padding:2px 8px;border-radius:999px;font-size:12px;font-weight:500px;background:#fffbeb;color:#b45309">待上架</span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+<nav style="position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:99;display:flex;gap:4px;background:rgba(20,20,25,0.85);backdrop-filter:blur(8px);padding:6px;border-radius:999px;box-shadow:0 8px 30px rgba(0,0,0,0.25)"><a href="数据中心-甄选商城管理后台.html" style="padding:6px 14px;border-radius:999px;font-size:12px;text-decoration:none;color:rgba(255,255,255,0.75)">数据中心 - 甄选商城管理后台</a><a href="商品管理-甄选商城管理后台.html" style="padding:6px 14px;border-radius:999px;font-size:12px;text-decoration:none;background:#fff;color:#111;font-weight:600">商品管理 - 甄选商城管理后台</a><a href="订单管理-甄选商城管理后台.html" style="padding:6px 14px;border-radius:999px;font-size:12px;text-decoration:none;color:rgba(255,255,255,0.75)">订单管理 - 甄选商城管理后台</a><a href="客户管理-甄选商城管理后台.html" style="padding:6px 14px;border-radius:999px;font-size:12px;text-decoration:none;color:rgba(255,255,255,0.75)">客户管理 - 甄选商城管理后台</a><a href="营销分析-甄选商城管理后台.html" style="padding:6px 14px;border-radius:999px;font-size:12px;text-decoration:none;color:rgba(255,255,255,0.75)">营销分析 - 甄选商城管理后台</a></nav>
+</body>
+</html>

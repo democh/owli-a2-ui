@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>数据仪表盘 · 星轨咖啡官网</title>
+<style>*{margin:0;padding:0}body{-webkit-font-smoothing:antialiased}button{font-family:inherit}a{font-family:inherit}</style>
+</head>
+<body>
+  <div style="min-height:100vh;width:100%;background:#f6f7fb;color:#09090b;font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;display:flex;flex-direction:column">
+    <div style="display:flex;min-height:100vh">
+      <aside style="width:220px;flex-shrink:0px;background:#fff;border-right:1px solid rgba(0,0,0,0.06);display:flex;flex-direction:column">
+        <div style="height:64px;display:flex;align-items:center;gap:8px;padding:0 20px;border-bottom:1px solid rgba(0,0,0,0.06)">
+          <span style="width:28px;height:28px;border-radius:10px;background:#16a34a;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700px;font-size:13px">N</span>
+          <strong style="color:#09090b">Nova</strong>
+        </div>
+        <nav style="flex:1px;padding:12px;display:flex;flex-direction:column;gap:4px">
+          <a href="#" style="padding:8px 12px;font-size:14px;border-radius:10px;cursor:pointer;text-decoration:none;background:#16a34a;color:#fff;font-weight:500px">概览</a>
+          <a href="#" style="padding:8px 12px;font-size:14px;border-radius:10px;cursor:pointer;text-decoration:none;color:#71717a">订单</a>
+          <a href="#" style="padding:8px 12px;font-size:14px;border-radius:10px;cursor:pointer;text-decoration:none;color:#71717a">客户</a>
+          <a href="#" style="padding:8px 12px;font-size:14px;border-radius:10px;cursor:pointer;text-decoration:none;color:#71717a">商品</a>
+          <a href="#" style="padding:8px 12px;font-size:14px;border-radius:10px;cursor:pointer;text-decoration:none;color:#71717a">营销</a>
+          <a href="#" style="padding:8px 12px;font-size:14px;border-radius:10px;cursor:pointer;text-decoration:none;color:#71717a">报表</a>
+          <a href="#" style="padding:8px 12px;font-size:14px;border-radius:10px;cursor:pointer;text-decoration:none;color:#71717a">设置</a>
+        </nav>
+      </aside>
+      <main style="flex:1px;min-width:0px;background:#f6f7fb">
+        <div style="height:64px;background:#fff;border-bottom:1px solid rgba(0,0,0,0.06);display:flex;align-items:center;padding:0 24px">
+          <h1 style="font-size:18px;font-weight:600px;color:#09090b;margin:0px">运营概览</h1>
+        </div>
+        <section style="display:flex;flex-direction:column;width:100%;box-sizing:border-box;gap:20px;padding:24px">
+          <div style="display:grid;width:100%;grid-template-columns:repeat(4, minmax(0,1fr));gap:16px;padding:0px;box-sizing:border-box">
+            <div style="background:#fff;border-radius:10px;border:1px solid rgba(0,0,0,0.06);box-shadow:0 1px 3px rgba(0,0,0,0.05);padding:20px">
+              <div style="display:flex;align-items:center;justify-content:space-between">
+                <span style="font-size:14px;color:#71717a">今日营收</span>
+                <span style="width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb, #16a34a 10%, transparent);color:#16a34a">
+                  <span style="font-size:16px;line-height:1;display:inline-flex;flex-shrink:0px">▭</span>
+                </span>
+              </div>
+              <div style="font-size:28px;font-weight:700px;color:#09090b;margin-top:8px">¥128,430</div>
+              <div style="font-size:12px;margin-top:4px;color:#16a34a">+12.5%</div>
+            </div>
+            <div style="background:#fff;border-radius:10px;border:1px solid rgba(0,0,0,0.06);box-shadow:0 1px 3px rgba(0,0,0,0.05);padding:20px">
+              <div style="display:flex;align-items:center;justify-content:space-between">
+                <span style="font-size:14px;color:#71717a">活跃用户</span>
+                <span style="width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb, #16a34a 10%, transparent);color:#16a34a">
+                  <span style="font-size:16px;line-height:1;display:inline-flex;flex-shrink:0px">◯◯</span>
+                </span>
+              </div>
+              <div style="font-size:28px;font-weight:700px;color:#09090b;margin-top:8px">8,742</div>
+              <div style="font-size:12px;margin-top:4px;color:#16a34a">+5.2%</div>
+            </div>
+            <div style="background:#fff;border-radius:10px;border:1px solid rgba(0,0,0,0.06);box-shadow:0 1px 3px rgba(0,0,0,0.05);padding:20px">
+              <div style="display:flex;align-items:center;justify-content:space-between">
+                <span style="font-size:14px;color:#71717a">订单量</span>
+                <span style="width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb, #16a34a 10%, transparent);color:#16a34a">
+                  <span style="font-size:16px;line-height:1;display:inline-flex;flex-shrink:0px">◫</span>
+                </span>
+              </div>
+              <div style="font-size:28px;font-weight:700px;color:#09090b;margin-top:8px">1,286</div>
+              <div style="font-size:12px;margin-top:4px;color:#dc2626">-2.4%</div>
+            </div>
+            <div style="background:#fff;border-radius:10px;border:1px solid rgba(0,0,0,0.06);box-shadow:0 1px 3px rgba(0,0,0,0.05);padding:20px">
+              <div style="display:flex;align-items:center;justify-content:space-between">
+                <span style="font-size:14px;color:#71717a">转化率</span>
+                <span style="width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb, #16a34a 10%, transparent);color:#16a34a">
+                  <span style="font-size:16px;line-height:1;display:inline-flex;flex-shrink:0px">◎</span>
+                </span>
+              </div>
+              <div style="font-size:28px;font-weight:700px;color:#09090b;margin-top:8px">3.42%</div>
+              <div style="font-size:12px;margin-top:4px;color:#16a34a">+0.8%</div>
+            </div>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;width:100%;gap:16px;align-items:flex-start;justify-content:flex-start;padding:0px">
+            <div style="flex:3px;min-width:0px">
+              <div style="background:#fff;border-radius:10px;border:1px solid rgba(0,0,0,0.06);box-shadow:0 1px 3px rgba(0,0,0,0.05);padding:20px">
+                <div style="font-weight:600px;font-size:15px;color:#09090b;margin-bottom:12px">营收趋势</div>
+                <div style="display:flex;flex-direction:column;gap:12px">
+                  <div style="width:100%"><div style="width:100%;overflow:hidden;color:inherit"><svg viewBox="0 0 720 280" style="width:100%;height:280px"><line x1="40" x2="704" y1="193" y2="193" stroke="currentColor" stroke-opacity="0.08"/><line x1="40" x2="704" y1="134" y2="134" stroke="currentColor" stroke-opacity="0.08"/><line x1="40" x2="704" y1="75" y2="75" stroke="currentColor" stroke-opacity="0.08"/><line x1="40" x2="704" y1="16" y2="16" stroke="currentColor" stroke-opacity="0.08"/><path d="M87.42857142857143,115.71830985915491 L182.28571428571428,94.11267605633802 L277.14285714285717,122.36619718309859 L372,69.18309859154931 L466.8571428571429,42.59154929577463 L561.7142857142858,16 L656.5714285714286,39.267605633802816 L656.5714285714286,252 L87.42857142857143,252 Z" fill="#16a34a" opacity="0.14"/><path d="M87.42857142857143,115.71830985915491 L182.28571428571428,94.11267605633802 L277.14285714285717,122.36619718309859 L372,69.18309859154931 L466.8571428571429,42.59154929577463 L561.7142857142858,16 L656.5714285714286,39.267605633802816" fill="none" stroke="#16a34a" stroke-width="2.5" stroke-linejoin="round"/><circle cx="87.42857142857143" cy="115.71830985915491" r="3.5" fill="#fff" stroke="#16a34a" stroke-width="2"><title>周一 · 本周: 82</title></circle><circle cx="182.28571428571428" cy="94.11267605633802" r="3.5" fill="#fff" stroke="#16a34a" stroke-width="2"><title>周二 · 本周: 95</title></circle><circle cx="277.14285714285717" cy="122.36619718309859" r="3.5" fill="#fff" stroke="#16a34a" stroke-width="2"><title>周三 · 本周: 78</title></circle><circle cx="372" cy="69.18309859154931" r="3.5" fill="#fff" stroke="#16a34a" stroke-width="2"><title>周四 · 本周: 110</title></circle><circle cx="466.8571428571429" cy="42.59154929577463" r="3.5" fill="#fff" stroke="#16a34a" stroke-width="2"><title>周五 · 本周: 126</title></circle><circle cx="561.7142857142858" cy="16" r="3.5" fill="#fff" stroke="#16a34a" stroke-width="2"><title>周六 · 本周: 142</title></circle><circle cx="656.5714285714286" cy="39.267605633802816" r="3.5" fill="#fff" stroke="#16a34a" stroke-width="2"><title>周日 · 本周: 128</title></circle><path d="M87.42857142857143,138.98591549295776 L182.28571428571428,129.01408450704224 L277.14285714285717,135.66197183098592 L372,105.74647887323945 L466.8571428571429,92.45070422535213 L561.7142857142858,79.15492957746477 L656.5714285714286,89.12676056338029 L656.5714285714286,252 L87.42857142857143,252 Z" fill="#22c55e" opacity="0.14"/><path d="M87.42857142857143,138.98591549295776 L182.28571428571428,129.01408450704224 L277.14285714285717,135.66197183098592 L372,105.74647887323945 L466.8571428571429,92.45070422535213 L561.7142857142858,79.15492957746477 L656.5714285714286,89.12676056338029" fill="none" stroke="#22c55e" stroke-width="2.5" stroke-linejoin="round"/><circle cx="87.42857142857143" cy="138.98591549295776" r="3.5" fill="#fff" stroke="#22c55e" stroke-width="2"><title>周一 · 上周: 68</title></circle><circle cx="182.28571428571428" cy="129.01408450704224" r="3.5" fill="#fff" stroke="#22c55e" stroke-width="2"><title>周二 · 上周: 74</title></circle><circle cx="277.14285714285717" cy="135.66197183098592" r="3.5" fill="#fff" stroke="#22c55e" stroke-width="2"><title>周三 · 上周: 70</title></circle><circle cx="372" cy="105.74647887323945" r="3.5" fill="#fff" stroke="#22c55e" stroke-width="2"><title>周四 · 上周: 88</title></circle><circle cx="466.8571428571429" cy="92.45070422535213" r="3.5" fill="#fff" stroke="#22c55e" stroke-width="2"><title>周五 · 上周: 96</title></circle><circle cx="561.7142857142858" cy="79.15492957746477" r="3.5" fill="#fff" stroke="#22c55e" stroke-width="2"><title>周六 · 上周: 104</title></circle><circle cx="656.5714285714286" cy="89.12676056338029" r="3.5" fill="#fff" stroke="#22c55e" stroke-width="2"><title>周日 · 上周: 98</title></circle><text x="87.42857142857143" y="272" text-anchor="middle" font-size="11" fill="currentColor" opacity="0.5">周一</text><text x="182.28571428571428" y="272" text-anchor="middle" font-size="11" fill="currentColor" opacity="0.5">周二</text><text x="277.14285714285717" y="272" text-anchor="middle" font-size="11" fill="currentColor" opacity="0.5">周三</text><text x="372" y="272" text-anchor="middle" font-size="11" fill="currentColor" opacity="0.5">周四</text><text x="466.8571428571429" y="272" text-anchor="middle" font-size="11" fill="currentColor" opacity="0.5">周五</text><text x="561.7142857142858" y="272" text-anchor="middle" font-size="11" fill="currentColor" opacity="0.5">周六</text><text x="656.5714285714286" y="272" text-anchor="middle" font-size="11" fill="currentColor" opacity="0.5">周日</text></svg><div style="display:flex;gap:16px;justify-content:center;margin-top:4px;flex-wrap:wrap"><span style="display:flex;align-items:center;gap:6px;font-size:12px;opacity:.75"><span style="display:inline-block;width:8px;height:8px;border-radius:999px;background:#16a34a"></span>本周</span><span style="display:flex;align-items:center;gap:6px;font-size:12px;opacity:.75"><span style="display:inline-block;width:8px;height:8px;border-radius:999px;background:#22c55e"></span>上周</span></div></div></div>
+                </div>
+              </div>
+            </div>
+            <div style="flex:2px;min-width:0px">
+              <div style="background:#fff;border-radius:10px;border:1px solid rgba(0,0,0,0.06);box-shadow:0 1px 3px rgba(0,0,0,0.05);padding:20px">
+                <div style="font-weight:600px;font-size:15px;color:#09090b;margin-bottom:12px">渠道分布</div>
+                <div style="display:flex;flex-direction:column;gap:12px">
+                  <div style="width:100%"><div style="width:100%;overflow:hidden;color:inherit"><svg viewBox="0 0 720 280" style="width:100%;height:280px"><line x1="40" x2="704" y1="193" y2="193" stroke="currentColor" stroke-opacity="0.08"/><line x1="40" x2="704" y1="134" y2="134" stroke="currentColor" stroke-opacity="0.08"/><line x1="40" x2="704" y1="75" y2="75" stroke="currentColor" stroke-opacity="0.08"/><line x1="40" x2="704" y1="16" y2="16" stroke="currentColor" stroke-opacity="0.08"/><rect x="65.232" y="16" width="38" height="236" rx="4" fill="#16a34a" opacity="0.92"><title>直接访问 · 访问量: 420</title></rect><rect x="198.032" y="38.47619047619048" width="38" height="213.52380952380952" rx="4" fill="#16a34a" opacity="0.92"><title>搜索引擎 · 访问量: 380</title></rect><rect x="330.832" y="89.04761904761904" width="38" height="162.95238095238096" rx="4" fill="#16a34a" opacity="0.92"><title>社交媒体 · 访问量: 290</title></rect><rect x="463.63200000000006" y="150.85714285714286" width="38" height="101.14285714285714" rx="4" fill="#16a34a" opacity="0.92"><title>邮件 · 访问量: 180</title></rect><rect x="596.432" y="184.57142857142856" width="38" height="67.42857142857144" rx="4" fill="#16a34a" opacity="0.92"><title>联盟 · 访问量: 120</title></rect><text x="106.4" y="272" text-anchor="middle" font-size="11" fill="currentColor" opacity="0.5">直接访问</text><text x="239.20000000000002" y="272" text-anchor="middle" font-size="11" fill="currentColor" opacity="0.5">搜索引擎</text><text x="372" y="272" text-anchor="middle" font-size="11" fill="currentColor" opacity="0.5">社交媒体</text><text x="504.80000000000007" y="272" text-anchor="middle" font-size="11" fill="currentColor" opacity="0.5">邮件</text><text x="637.6" y="272" text-anchor="middle" font-size="11" fill="currentColor" opacity="0.5">联盟</text></svg></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div style="background:#fff;border-radius:10px;border:1px solid rgba(0,0,0,0.06);box-shadow:0 1px 3px rgba(0,0,0,0.05);padding:12px">
+            <div style="font-weight:600px;font-size:15px;color:#09090b;margin-bottom:12px">最新订单</div>
+            <div style="display:flex;flex-direction:column;gap:12px">
+              <div style="width:100%;overflow-x:auto">
+                <table style="width:100%;font-size:14px;border-collapse:collapse">
+                  <thead>
+                    <tr style="border-bottom:1px solid rgba(0,0,0,0.07)">
+                      <th style="text-align:left;font-weight:500px;color:#71717a;padding:10px 12px;white-space:nowrap">订单号</th>
+                      <th style="text-align:left;font-weight:500px;color:#71717a;padding:10px 12px;white-space:nowrap">客户</th>
+                      <th style="text-align:left;font-weight:500px;color:#71717a;padding:10px 12px;white-space:nowrap">金额</th>
+                      <th style="text-align:left;font-weight:500px;color:#71717a;padding:10px 12px;white-space:nowrap">状态</th>
+                      <th style="text-align:left;font-weight:500px;color:#71717a;padding:10px 12px;white-space:nowrap">时间</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr style="border-bottom:1px solid rgba(0,0,0,0.04)">
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">#A-8821</td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">陈默</td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">¥2,380</td>
+                      <td style="padding:12px;white-space:nowrap">
+                        <span style="padding:2px 8px;border-radius:999px;font-size:12px;font-weight:500px;background:#f0fdf4;color:#15803d">已支付</span>
+                      </td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">10:24</td>
+                    </tr>
+                    <tr style="border-bottom:1px solid rgba(0,0,0,0.04)">
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">#A-8820</td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">苏黎</td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">¥9,120</td>
+                      <td style="padding:12px;white-space:nowrap">
+                        <span style="padding:2px 8px;border-radius:999px;font-size:12px;font-weight:500px;background:#fffbeb;color:#b45309">待发货</span>
+                      </td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">09:58</td>
+                    </tr>
+                    <tr style="border-bottom:1px solid rgba(0,0,0,0.04)">
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">#A-8819</td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">陆远桥</td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">¥560</td>
+                      <td style="padding:12px;white-space:nowrap">
+                        <span style="padding:2px 8px;border-radius:999px;font-size:12px;font-weight:500px;background:#f0fdf4;color:#15803d">已支付</span>
+                      </td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">09:41</td>
+                    </tr>
+                    <tr style="border-bottom:1px solid rgba(0,0,0,0.04)">
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">#A-8818</td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">何雨桐</td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">¥1,750</td>
+                      <td style="padding:12px;white-space:nowrap">
+                        <span style="padding:2px 8px;border-radius:999px;font-size:12px;font-weight:500px;background:#fef2f2;color:#dc2626">已退款</span>
+                      </td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">09:12</td>
+                    </tr>
+                    <tr style="border-bottom:1px solid rgba(0,0,0,0.04)">
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">#A-8817</td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">沈从舟</td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">¥3,300</td>
+                      <td style="padding:12px;white-space:nowrap">
+                        <span style="padding:2px 8px;border-radius:999px;font-size:12px;font-weight:500px;background:#f0fdf4;color:#15803d">已支付</span>
+                      </td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">08:47</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+<nav style="position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:99;display:flex;gap:4px;background:rgba(20,20,25,0.85);backdrop-filter:blur(8px);padding:6px;border-radius:999px;box-shadow:0 8px 30px rgba(0,0,0,0.25)"><a href="首页.html" style="padding:6px 14px;border-radius:999px;font-size:12px;text-decoration:none;color:rgba(255,255,255,0.75)">首页</a><a href="数据仪表盘.html" style="padding:6px 14px;border-radius:999px;font-size:12px;text-decoration:none;background:#fff;color:#111;font-weight:600">数据仪表盘</a><a href="移动端首页.html" style="padding:6px 14px;border-radius:999px;font-size:12px;text-decoration:none;color:rgba(255,255,255,0.75)">移动端首页</a><a href="定价页.html" style="padding:6px 14px;border-radius:999px;font-size:12px;text-decoration:none;color:rgba(255,255,255,0.75)">定价页</a></nav>
+</body>
+</html>

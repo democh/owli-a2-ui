@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>数据中心 - 甄选商城管理后台 · test</title>
+<style>*{margin:0;padding:0}body{-webkit-font-smoothing:antialiased}button{font-family:inherit}a{font-family:inherit}</style>
+</head>
+<body>
+  <div style="min-height:100vh;width:100%;background:#f4f4f5;color:#09090b;font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;display:flex;flex-direction:column">
+    <div style="display:flex;min-height:100vh">
+      <aside style="width:220px;flex-shrink:0px;background:#fff;border-right:1px solid rgba(0,0,0,0.06);display:flex;flex-direction:column">
+        <div style="height:64px;display:flex;align-items:center;gap:8px;padding:0 20px;border-bottom:1px solid rgba(0,0,0,0.06)">
+          <span style="width:28px;height:28px;border-radius:10px;background:#18181b;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700px;font-size:13px">甄</span>
+          <strong style="color:#09090b">甄选</strong>
+        </div>
+        <nav style="flex:1px;padding:12px;display:flex;flex-direction:column;gap:4px">
+          <a href="#" style="padding:8px 12px;font-size:14px;border-radius:10px;cursor:pointer;text-decoration:none;background:#18181b;color:#fff;font-weight:500px">仪表盘</a>
+          <a href="#" style="padding:8px 12px;font-size:14px;border-radius:10px;cursor:pointer;text-decoration:none;color:#71717a">商品管理</a>
+          <a href="#" style="padding:8px 12px;font-size:14px;border-radius:10px;cursor:pointer;text-decoration:none;color:#71717a">订单管理</a>
+          <a href="#" style="padding:8px 12px;font-size:14px;border-radius:10px;cursor:pointer;text-decoration:none;color:#71717a">客户管理</a>
+          <a href="#" style="padding:8px 12px;font-size:14px;border-radius:10px;cursor:pointer;text-decoration:none;color:#71717a">营销分析</a>
+        </nav>
+      </aside>
+      <main style="flex:1px;min-width:0px;background:#f4f4f5">
+        <div style="height:64px;background:#fff;border-bottom:1px solid rgba(0,0,0,0.06);display:flex;align-items:center;padding:0 24px">
+          <h1 style="font-size:18px;font-weight:600px;color:#09090b;margin:0px">甄选商城</h1>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:stretch;gap:24px">
+          <div style="display:flex;flex-wrap:wrap;width:100%;gap:16px;align-items:center;justify-content:between;padding:0px">
+            <div style="display:contents">
+              <div style="display:flex;flex-direction:column;align-items:stretch;gap:8px">
+                <h1 style="font-size:36px;font-weight:800px;letter-spacing:-0.02em;color:#09090b;margin:0px;white-space:pre-line">数据中心</h1>
+                <p style="margin:0px;white-space:pre-line;font-size:14px;color:#71717a">掌握店铺经营全貌</p>
+              </div>
+            </div>
+            <div style="display:contents">
+              <button style="display:inline-flex;align-items:center;gap:6px;font-weight:500px;border-radius:10px;padding:8px 16px;font-size:14px;cursor:pointer;border:1px solid rgba(0,0,0,0.12);width:fit-content;background:#fff;color:#09090b">
+                <span style="font-size:15px;line-height:1;display:inline-flex;flex-shrink:0px">↓</span>
+                <span>导出报表</span>
+              </button>
+            </div>
+          </div>
+          <div style="display:grid;width:100%;grid-template-columns:repeat(4, minmax(0,1fr));gap:16px;padding:0px;box-sizing:border-box">
+            <div style="background:#fff;border-radius:10px;border:1px solid rgba(0,0,0,0.06);box-shadow:0 1px 3px rgba(0,0,0,0.05);padding:20px">
+              <div style="display:flex;align-items:center;justify-content:space-between">
+                <span style="font-size:14px;color:#71717a">今日销售额</span>
+                <span style="width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb, #2563eb 10%, transparent);color:#2563eb">
+                  <span style="font-size:16px;line-height:1;display:inline-flex;flex-shrink:0px">▭</span>
+                </span>
+              </div>
+              <div style="font-size:28px;font-weight:700px;color:#09090b;margin-top:8px">¥28,456</div>
+              <div style="font-size:12px;margin-top:4px;color:#16a34a">+12.5%</div>
+            </div>
+            <div style="background:#fff;border-radius:10px;border:1px solid rgba(0,0,0,0.06);box-shadow:0 1px 3px rgba(0,0,0,0.05);padding:20px">
+              <div style="display:flex;align-items:center;justify-content:space-between">
+                <span style="font-size:14px;color:#71717a">今日订单量</span>
+                <span style="width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb, #2563eb 10%, transparent);color:#2563eb">
+                  <span style="font-size:16px;line-height:1;display:inline-flex;flex-shrink:0px">◫</span>
+                </span>
+              </div>
+              <div style="font-size:28px;font-weight:700px;color:#09090b;margin-top:8px">326</div>
+              <div style="font-size:12px;margin-top:4px;color:#16a34a">+8.2%</div>
+            </div>
+            <div style="background:#fff;border-radius:10px;border:1px solid rgba(0,0,0,0.06);box-shadow:0 1px 3px rgba(0,0,0,0.05);padding:20px">
+              <div style="display:flex;align-items:center;justify-content:space-between">
+                <span style="font-size:14px;color:#71717a">新增客户</span>
+                <span style="width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb, #2563eb 10%, transparent);color:#2563eb">
+                  <span style="font-size:16px;line-height:1;display:inline-flex;flex-shrink:0px">◯</span>
+                </span>
+              </div>
+              <div style="font-size:28px;font-weight:700px;color:#09090b;margin-top:8px">48</div>
+              <div style="font-size:12px;margin-top:4px;color:#dc2626">-3.1%</div>
+            </div>
+            <div style="background:#fff;border-radius:10px;border:1px solid rgba(0,0,0,0.06);box-shadow:0 1px 3px rgba(0,0,0,0.05);padding:20px">
+              <div style="display:flex;align-items:center;justify-content:space-between">
+                <span style="font-size:14px;color:#71717a">商品总数</span>
+                <span style="width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb, #2563eb 10%, transparent);color:#2563eb">
+                  <span style="font-size:16px;line-height:1;display:inline-flex;flex-shrink:0px">▦</span>
+                </span>
+              </div>
+              <div style="font-size:28px;font-weight:700px;color:#09090b;margin-top:8px">1,249</div>
+              <div style="font-size:12px;margin-top:4px;color:#16a34a">+23</div>
+            </div>
+          </div>
+          <div style="background:#fff;border-radius:10px;border:1px solid rgba(0,0,0,0.06);box-shadow:0 1px 3px rgba(0,0,0,0.05);padding:24px">
+            <div style="font-weight:600px;font-size:15px;color:#09090b;margin-bottom:12px">销售趋势</div>
+            <div style="display:flex;flex-direction:column;gap:12px">
+              <div style="width:100%"><div style="width:100%;overflow:hidden;color:inherit"><svg viewBox="0 0 720 280" style="width:100%;height:280px"><line x1="40" x2="704" y1="193" y2="193" stroke="currentColor" stroke-opacity="0.08"/><line x1="40" x2="704" y1="134" y2="134" stroke="currentColor" stroke-opacity="0.08"/><line x1="40" x2="704" y1="75" y2="75" stroke="currentColor" stroke-opacity="0.08"/><line x1="40" x2="704" y1="16" y2="16" stroke="currentColor" stroke-opacity="0.08"/><path d="M67.66666666666667,157.6 L123.00000000000001,148.16 L178.33333333333334,137.93333333333334 L233.66666666666666,126.13333333333334 L289.00000000000006,111.97333333333333 L344.33333333333337,102.53333333333333 L399.6666666666667,90.73333333333332 L455.00000000000006,78.93333333333334 L510.33333333333337,63.19999999999999 L565.6666666666666,47.46666666666667 L621,31.73333333333332 L676.3333333333334,16 L676.3333333333334,252 L67.66666666666667,252 Z" fill="#2563eb" opacity="0.14"/><path d="M67.66666666666667,157.6 L123.00000000000001,148.16 L178.33333333333334,137.93333333333334 L233.66666666666666,126.13333333333334 L289.00000000000006,111.97333333333333 L344.33333333333337,102.53333333333333 L399.6666666666667,90.73333333333332 L455.00000000000006,78.93333333333334 L510.33333333333337,63.19999999999999 L565.6666666666666,47.46666666666667 L621,31.73333333333332 L676.3333333333334,16" fill="none" stroke="#2563eb" stroke-width="2.5" stroke-linejoin="round"/><circle cx="67.66666666666667" cy="157.6" r="3.5" fill="#fff" stroke="#2563eb" stroke-width="2"><title>1月 · 销售额: 120</title></circle><circle cx="123.00000000000001" cy="148.16" r="3.5" fill="#fff" stroke="#2563eb" stroke-width="2"><title>2月 · 销售额: 132</title></circle><circle cx="178.33333333333334" cy="137.93333333333334" r="3.5" fill="#fff" stroke="#2563eb" stroke-width="2"><title>3月 · 销售额: 145</title></circle><circle cx="233.66666666666666" cy="126.13333333333334" r="3.5" fill="#fff" stroke="#2563eb" stroke-width="2"><title>4月 · 销售额: 160</title></circle><circle cx="289.00000000000006" cy="111.97333333333333" r="3.5" fill="#fff" stroke="#2563eb" stroke-width="2"><title>5月 · 销售额: 178</title></circle><circle cx="344.33333333333337" cy="102.53333333333333" r="3.5" fill="#fff" stroke="#2563eb" stroke-width="2"><title>6月 · 销售额: 190</title></circle><circle cx="399.6666666666667" cy="90.73333333333332" r="3.5" fill="#fff" stroke="#2563eb" stroke-width="2"><title>7月 · 销售额: 205</title></circle><circle cx="455.00000000000006" cy="78.93333333333334" r="3.5" fill="#fff" stroke="#2563eb" stroke-width="2"><title>8月 · 销售额: 220</title></circle><circle cx="510.33333333333337" cy="63.19999999999999" r="3.5" fill="#fff" stroke="#2563eb" stroke-width="2"><title>9月 · 销售额: 240</title></circle><circle cx="565.6666666666666" cy="47.46666666666667" r="3.5" fill="#fff" stroke="#2563eb" stroke-width="2"><title>10月 · 销售额: 260</title></circle><circle cx="621" cy="31.73333333333332" r="3.5" fill="#fff" stroke="#2563eb" stroke-width="2"><title>11月 · 销售额: 280</title></circle><circle cx="676.3333333333334" cy="16" r="3.5" fill="#fff" stroke="#2563eb" stroke-width="2"><title>12月 · 销售额: 300</title></circle><text x="67.66666666666667" y="272" text-anchor="middle" font-size="11" fill="currentColor" opacity="0.5">1月</text><text x="123.00000000000001" y="272" text-anchor="middle" font-size="11" fill="currentColor" opacity="0.5">2月</text><text x="178.33333333333334" y="272" text-anchor="middle" font-size="11" fill="currentColor" opacity="0.5">3月</text><text x="233.66666666666666" y="272" text-anchor="middle" font-size="11" fill="currentColor" opacity="0.5">4月</text><text x="289.00000000000006" y="272" text-anchor="middle" font-size="11" fill="currentColor" opacity="0.5">5月</text><text x="344.33333333333337" y="272" text-anchor="middle" font-size="11" fill="currentColor" opacity="0.5">6月</text><text x="399.6666666666667" y="272" text-anchor="middle" font-size="11" fill="currentColor" opacity="0.5">7月</text><text x="455.00000000000006" y="272" text-anchor="middle" font-size="11" fill="currentColor" opacity="0.5">8月</text><text x="510.33333333333337" y="272" text-anchor="middle" font-size="11" fill="currentColor" opacity="0.5">9月</text><text x="565.6666666666666" y="272" text-anchor="middle" font-size="11" fill="currentColor" opacity="0.5">10月</text><text x="621" y="272" text-anchor="middle" font-size="11" fill="currentColor" opacity="0.5">11月</text><text x="676.3333333333334" y="272" text-anchor="middle" font-size="11" fill="currentColor" opacity="0.5">12月</text></svg></div></div>
+            </div>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;width:100%;gap:16px;align-items:flex-start;justify-content:flex-start;padding:0px">
+            <div style="flex:2px;min-width:0px">
+              <div style="background:#fff;border-radius:10px;border:1px solid rgba(0,0,0,0.06);box-shadow:0 1px 3px rgba(0,0,0,0.05);padding:24px">
+                <div style="font-weight:600px;font-size:15px;color:#09090b;margin-bottom:12px">订单分类占比</div>
+                <div style="display:flex;flex-direction:column;gap:12px">
+                  <div style="width:100%"><div style="width:100%;overflow:hidden;color:inherit"><svg viewBox="0 0 720 260" style="width:100%;height:260px"><line x1="40" x2="704" y1="178" y2="178" stroke="currentColor" stroke-opacity="0.08"/><line x1="40" x2="704" y1="124" y2="124" stroke="currentColor" stroke-opacity="0.08"/><line x1="40" x2="704" y1="70" y2="70" stroke="currentColor" stroke-opacity="0.08"/><line x1="40" x2="704" y1="16" y2="16" stroke="currentColor" stroke-opacity="0.08"/><path d="M360,124 L360,24 A100,100 0 0 1 454.73263538541914,156.02698538628374 Z" fill="#2563eb" opacity="0.92"><title>服装: 320</title></path><path d="M360,124 L454.73263538541914,156.02698538628374 A100,100 0 0 1 319.6876570712028,215.51456172430187 Z" fill="#22c55e" opacity="0.92"><title>数码: 280</title></path><path d="M360,124 L319.6876570712028,215.51456172430187 A100,100 0 0 1 260.3950157384783,115.12041046770653 Z" fill="#f59e0b" opacity="0.92"><title>家居: 210</title></path><path d="M360,124 L260.3950157384783,115.12041046770653 A100,100 0 0 1 304.13532341963474,41.05943145497983 Z" fill="#ec4899" opacity="0.92"><title>美妆: 150</title></path><path d="M360,124 L304.13532341963474,41.05943145497983 A100,100 0 0 1 360,24 Z" fill="#06b6d4" opacity="0.92"><title>食品: 100</title></path></svg><div style="display:flex;gap:16px;justify-content:center;margin-top:4px;flex-wrap:wrap"><span style="display:flex;align-items:center;gap:6px;font-size:12px;opacity:.75"><span style="display:inline-block;width:8px;height:8px;border-radius:999px;background:#2563eb"></span>服装</span><span style="display:flex;align-items:center;gap:6px;font-size:12px;opacity:.75"><span style="display:inline-block;width:8px;height:8px;border-radius:999px;background:#22c55e"></span>数码</span><span style="display:flex;align-items:center;gap:6px;font-size:12px;opacity:.75"><span style="display:inline-block;width:8px;height:8px;border-radius:999px;background:#f59e0b"></span>家居</span><span style="display:flex;align-items:center;gap:6px;font-size:12px;opacity:.75"><span style="display:inline-block;width:8px;height:8px;border-radius:999px;background:#ec4899"></span>美妆</span><span style="display:flex;align-items:center;gap:6px;font-size:12px;opacity:.75"><span style="display:inline-block;width:8px;height:8px;border-radius:999px;background:#06b6d4"></span>食品</span></div></div></div>
+                </div>
+              </div>
+            </div>
+            <div style="flex:1px;min-width:0px">
+              <div style="background:#fff;border-radius:10px;border:1px solid rgba(0,0,0,0.06);box-shadow:0 1px 3px rgba(0,0,0,0.05);padding:24px">
+                <div style="font-weight:600px;font-size:15px;color:#09090b;margin-bottom:12px">待处理事项</div>
+                <div style="display:flex;flex-direction:column;gap:12px">
+                  <div style="display:flex;flex-direction:column;gap:16px;padding:20px">
+                    <div style="display:flex;align-items:center;gap:14px;padding:12px 8px;border-radius:10px">
+                      <span style="width:36px;height:36px;border-radius:10px;background:#ffffff;flex-shrink:0px;display:flex;align-items:center;justify-content:center;color:#09090b">
+                        <span style="font-size:17px;line-height:1;display:inline-flex;flex-shrink:0px">◷</span>
+                      </span>
+                      <div style="flex:1px;min-width:0px">
+                        <div style="font-size:14px;font-weight:500px;color:#09090b">退款申请 #2024111</div>
+                        <div style="font-size:12px;color:#71717a;margin-top:2px">买家提交退款，等待审核</div>
+                      </div>
+                      <span style="font-size:12px;color:#71717a">:处理</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:14px;padding:12px 8px;border-radius:10px">
+                      <span style="width:36px;height:36px;border-radius:10px;background:#ffffff;flex-shrink:0px;display:flex;align-items:center;justify-content:center;color:#09090b">
+                        <span style="font-size:17px;line-height:1;display:inline-flex;flex-shrink:0px">◍</span>
+                      </span>
+                      <div style="flex:1px;min-width:0px">
+                        <div style="font-size:14px;font-weight:500px;color:#09090b">库存预警</div>
+                        <div style="font-size:12px;color:#71717a;margin-top:2px">「无线耳机」库存仅剩 12 件</div>
+                      </div>
+                      <span style="font-size:12px;color:#71717a">:补货</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:14px;padding:12px 8px;border-radius:10px">
+                      <span style="width:36px;height:36px;border-radius:10px;background:#ffffff;flex-shrink:0px;display:flex;align-items:center;justify-content:center;color:#09090b">
+                        <span style="font-size:17px;line-height:1;display:inline-flex;flex-shrink:0px">◱</span>
+                      </span>
+                      <div style="flex:1px;min-width:0px">
+                        <div style="font-size:14px;font-weight:500px;color:#09090b">新评价待回复</div>
+                        <div style="font-size:12px;color:#71717a;margin-top:2px">3 条差评等待商家回复</div>
+                      </div>
+                      <span style="font-size:12px;color:#71717a">:回复</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:14px;padding:12px 8px;border-radius:10px">
+                      <span style="width:36px;height:36px;border-radius:10px;background:#ffffff;flex-shrink:0px;display:flex;align-items:center;justify-content:center;color:#09090b">
+                        <span style="font-size:17px;line-height:1;display:inline-flex;flex-shrink:0px">✜</span>
+                      </span>
+                      <div style="flex:1px;min-width:0px">
+                        <div style="font-size:14px;font-weight:500px;color:#09090b">满减活动待上架</div>
+                        <div style="font-size:12px;color:#71717a;margin-top:2px">双十一预热活动尚未发布</div>
+                      </div>
+                      <span style="font-size:12px;color:#71717a">:查看</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div style="background:#fff;border-radius:10px;border:1px solid rgba(0,0,0,0.06);box-shadow:0 1px 3px rgba(0,0,0,0.05);padding:24px">
+            <div style="font-weight:600px;font-size:15px;color:#09090b;margin-bottom:12px">最近订单</div>
+            <div style="display:flex;flex-direction:column;gap:12px">
+              <div style="width:100%;overflow-x:auto">
+                <table style="width:100%;font-size:14px;border-collapse:collapse">
+                  <thead>
+                    <tr style="border-bottom:1px solid rgba(0,0,0,0.07)">
+                      <th style="text-align:left;font-weight:500px;color:#71717a;padding:10px 12px;white-space:nowrap">订单号</th>
+                      <th style="text-align:left;font-weight:500px;color:#71717a;padding:10px 12px;white-space:nowrap">客户</th>
+                      <th style="text-align:left;font-weight:500px;color:#71717a;padding:10px 12px;white-space:nowrap">金额</th>
+                      <th style="text-align:left;font-weight:500px;color:#71717a;padding:10px 12px;white-space:nowrap">状态</th>
+                      <th style="text-align:left;font-weight:500px;color:#71717a;padding:10px 12px;white-space:nowrap">下单时间</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr style="border-bottom:1px solid rgba(0,0,0,0.04)">
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">#20241101</td>
+                      <td style="padding:12px;white-space:nowrap">
+                        <span style="display:flex;align-items:center;gap:10px">
+                          <span style="width:28px;height:28px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600px;color:#fff;background:linear-gradient(135deg,#f093fb,#f5576c)">陈</span>
+                          <span style="color:#09090b">陈静</span>
+                        </span>
+                      </td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">¥1,299</td>
+                      <td style="padding:12px;white-space:nowrap">
+                        <span style="padding:2px 8px;border-radius:999px;font-size:12px;font-weight:500px;background:#f0fdf4;color:#15803d">已完成</span>
+                      </td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">2024-11-01 10:23</td>
+                    </tr>
+                    <tr style="border-bottom:1px solid rgba(0,0,0,0.04)">
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">#20241102</td>
+                      <td style="padding:12px;white-space:nowrap">
+                        <span style="display:flex;align-items:center;gap:10px">
+                          <span style="width:28px;height:28px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600px;color:#fff;background:linear-gradient(135deg,#f093fb,#f5576c)">李</span>
+                          <span style="color:#09090b">李伟</span>
+                        </span>
+                      </td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">¥1,499</td>
+                      <td style="padding:12px;white-space:nowrap">
+                        <span style="padding:2px 8px;border-radius:999px;font-size:12px;font-weight:500px;background:#fffbeb;color:#b45309">待发货</span>
+                      </td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">2024-11-01 11:02</td>
+                    </tr>
+                    <tr style="border-bottom:1px solid rgba(0,0,0,0.04)">
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">#20241103</td>
+                      <td style="padding:12px;white-space:nowrap">
+                        <span style="display:flex;align-items:center;gap:10px">
+                          <span style="width:28px;height:28px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600px;color:#fff;background:linear-gradient(135deg,#667eea,#764ba2)">王</span>
+                          <span style="color:#09090b">王芳</span>
+                        </span>
+                      </td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">¥297</td>
+                      <td style="padding:12px;white-space:nowrap">
+                        <span style="padding:2px 8px;border-radius:999px;font-size:12px;font-weight:500px;background:#fffbeb;color:#b45309">待付款</span>
+                      </td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">2024-11-01 11:45</td>
+                    </tr>
+                    <tr style="border-bottom:1px solid rgba(0,0,0,0.04)">
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">#20241104</td>
+                      <td style="padding:12px;white-space:nowrap">
+                        <span style="display:flex;align-items:center;gap:10px">
+                          <span style="width:28px;height:28px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600px;color:#fff;background:linear-gradient(135deg,#4facfe,#00f2fe)">张</span>
+                          <span style="color:#09090b">张强</span>
+                        </span>
+                      </td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">¥268</td>
+                      <td style="padding:12px;white-space:nowrap">
+                        <span style="padding:2px 8px;border-radius:999px;font-size:12px;font-weight:500px;background:#f0fdf4;color:#15803d">已完成</span>
+                      </td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">2024-11-01 12:11</td>
+                    </tr>
+                    <tr style="border-bottom:1px solid rgba(0,0,0,0.04)">
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">#20241105</td>
+                      <td style="padding:12px;white-space:nowrap">
+                        <span style="display:flex;align-items:center;gap:10px">
+                          <span style="width:28px;height:28px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600px;color:#fff;background:linear-gradient(135deg,#43e97b,#38f9d7)">刘</span>
+                          <span style="color:#09090b">刘洋</span>
+                        </span>
+                      </td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">¥396</td>
+                      <td style="padding:12px;white-space:nowrap">
+                        <span style="padding:2px 8px;border-radius:999px;font-size:12px;font-weight:500px;background:#fef2f2;color:#dc2626">已退款</span>
+                      </td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">2024-11-01 12:58</td>
+                    </tr>
+                    <tr style="border-bottom:1px solid rgba(0,0,0,0.04)">
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">#20241106</td>
+                      <td style="padding:12px;white-space:nowrap">
+                        <span style="display:flex;align-items:center;gap:10px">
+                          <span style="width:28px;height:28px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600px;color:#fff;background:linear-gradient(135deg,#4facfe,#00f2fe)">赵</span>
+                          <span style="color:#09090b">赵敏</span>
+                        </span>
+                      </td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">¥429</td>
+                      <td style="padding:12px;white-space:nowrap">
+                        <span style="padding:2px 8px;border-radius:999px;font-size:12px;font-weight:500px;background:#fffbeb;color:#b45309">待发货</span>
+                      </td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">2024-11-01 13:20</td>
+                    </tr>
+                    <tr style="border-bottom:1px solid rgba(0,0,0,0.04)">
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">#20241107</td>
+                      <td style="padding:12px;white-space:nowrap">
+                        <span style="display:flex;align-items:center;gap:10px">
+                          <span style="width:28px;height:28px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600px;color:#fff;background:linear-gradient(135deg,#f093fb,#f5576c)">孙</span>
+                          <span style="color:#09090b">孙磊</span>
+                        </span>
+                      </td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">¥899</td>
+                      <td style="padding:12px;white-space:nowrap">
+                        <span style="padding:2px 8px;border-radius:999px;font-size:12px;font-weight:500px;background:#f0fdf4;color:#15803d">已完成</span>
+                      </td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">2024-11-01 14:05</td>
+                    </tr>
+                    <tr style="border-bottom:1px solid rgba(0,0,0,0.04)">
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">#20241108</td>
+                      <td style="padding:12px;white-space:nowrap">
+                        <span style="display:flex;align-items:center;gap:10px">
+                          <span style="width:28px;height:28px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600px;color:#fff;background:linear-gradient(135deg,#667eea,#764ba2)">周</span>
+                          <span style="color:#09090b">周芸</span>
+                        </span>
+                      </td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">¥398</td>
+                      <td style="padding:12px;white-space:nowrap">
+                        <span style="padding:2px 8px;border-radius:999px;font-size:12px;font-weight:500px;background:#fffbeb;color:#b45309">待付款</span>
+                      </td>
+                      <td style="padding:12px;color:#09090b;white-space:nowrap">2024-11-01 14:37</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+<nav style="position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:99;display:flex;gap:4px;background:rgba(20,20,25,0.85);backdrop-filter:blur(8px);padding:6px;border-radius:999px;box-shadow:0 8px 30px rgba(0,0,0,0.25)"><a href="数据中心-甄选商城管理后台.html" style="padding:6px 14px;border-radius:999px;font-size:12px;text-decoration:none;background:#fff;color:#111;font-weight:600">数据中心 - 甄选商城管理后台</a><a href="商品管理-甄选商城管理后台.html" style="padding:6px 14px;border-radius:999px;font-size:12px;text-decoration:none;color:rgba(255,255,255,0.75)">商品管理 - 甄选商城管理后台</a><a href="订单管理-甄选商城管理后台.html" style="padding:6px 14px;border-radius:999px;font-size:12px;text-decoration:none;color:rgba(255,255,255,0.75)">订单管理 - 甄选商城管理后台</a><a href="客户管理-甄选商城管理后台.html" style="padding:6px 14px;border-radius:999px;font-size:12px;text-decoration:none;color:rgba(255,255,255,0.75)">客户管理 - 甄选商城管理后台</a><a href="营销分析-甄选商城管理后台.html" style="padding:6px 14px;border-radius:999px;font-size:12px;text-decoration:none;color:rgba(255,255,255,0.75)">营销分析 - 甄选商城管理后台</a></nav>
+</body>
+</html>

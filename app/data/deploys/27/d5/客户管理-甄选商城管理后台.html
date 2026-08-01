@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>客户管理 - 甄选商城管理后台 · test</title>
+<style>*{margin:0;padding:0}body{-webkit-font-smoothing:antialiased}button{font-family:inherit}a{font-family:inherit}</style>
+</head>
+<body>
+  <div style="min-height:100vh;width:100%;background:#f4f4f5;color:#09090b;font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;display:flex;flex-direction:column">
+    <div style="display:flex;min-height:100vh">
+      <aside style="width:220px;flex-shrink:0px;background:#fff;border-right:1px solid rgba(0,0,0,0.06);display:flex;flex-direction:column">
+        <div style="height:64px;display:flex;align-items:center;gap:8px;padding:0 20px;border-bottom:1px solid rgba(0,0,0,0.06)">
+          <span style="width:28px;height:28px;border-radius:10px;background:#18181b;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700px;font-size:13px">甄</span>
+          <strong style="color:#09090b">甄选</strong>
+        </div>
+        <nav style="flex:1px;padding:12px;display:flex;flex-direction:column;gap:4px">
+          <a href="#" style="padding:8px 12px;font-size:14px;border-radius:10px;cursor:pointer;text-decoration:none;color:#71717a">仪表盘</a>
+          <a href="#" style="padding:8px 12px;font-size:14px;border-radius:10px;cursor:pointer;text-decoration:none;color:#71717a">商品管理</a>
+          <a href="#" style="padding:8px 12px;font-size:14px;border-radius:10px;cursor:pointer;text-decoration:none;color:#71717a">订单管理</a>
+          <a href="#" style="padding:8px 12px;font-size:14px;border-radius:10px;cursor:pointer;text-decoration:none;background:#18181b;color:#fff;font-weight:500px">客户管理</a>
+          <a href="#" style="padding:8px 12px;font-size:14px;border-radius:10px;cursor:pointer;text-decoration:none;color:#71717a">营销分析</a>
+        </nav>
+      </aside>
+      <main style="flex:1px;min-width:0px;background:#f4f4f5">
+        <div style="height:64px;background:#fff;border-bottom:1px solid rgba(0,0,0,0.06);display:flex;align-items:center;padding:0 24px">
+          <h1 style="font-size:18px;font-weight:600px;color:#09090b;margin:0px">甄选商城</h1>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:stretch;gap:24px">
+          <div style="display:flex;flex-wrap:wrap;width:100%;gap:16px;align-items:center;justify-content:between;padding:0px">
+            <div style="display:contents">
+              <div style="display:flex;flex-direction:column;align-items:stretch;gap:8px">
+                <h1 style="font-size:36px;font-weight:800px;letter-spacing:-0.02em;color:#09090b;margin:0px;white-space:pre-line">客户管理</h1>
+                <p style="margin:0px;white-space:pre-line;font-size:14px;color:#71717a">共 8,532 位注册客户</p>
+              </div>
+            </div>
+            <div style="display:contents">
+              <div style="display:flex;flex-wrap:wrap;width:100%;gap:16px;align-items:flex-start;justify-content:flex-start;padding:0px">
+                <div style="display:contents">
+                  <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:10px;border:1px solid rgba(0,0,0,0.1);background:#fff;width:240px;box-sizing:border-box">
+                    <span style="font-size:16px;line-height:1;display:inline-flex;flex-shrink:0px;color:#71717a">⌕</span>
+                    <input placeholder="搜索姓名 / 手机号" readonly="true" style="flex:1px;font-size:14px;border:none;outline:none;background:transparent;color:#09090b;min-width:0px"/>
+                  </div>
+                </div>
+                <div style="display:contents">
+                  <select style="width:100%;padding:10px 14px;font-size:14px;border-radius:10px;border:1px solid rgba(0,0,0,0.1);background:#fff;color:#09090b;box-sizing:border-box;outline:none">
+                    <option>全部等级</option>
+                    <option>普通会员</option>
+                    <option>银卡会员</option>
+                    <option>金卡会员</option>
+                    <option>黑钻会员</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;width:100%;gap:16px;align-items:flex-start;justify-content:flex-start;padding:0px">
+            <div style="flex:1px;min-width:0px">
+              <div style="background:#fff;border-radius:10px;border:1px solid rgba(0,0,0,0.06);box-shadow:0 1px 3px rgba(0,0,0,0.05);padding:24px">
+                <div style="font-weight:600px;font-size:15px;color:#09090b;margin-bottom:12px">客户等级分布</div>
+                <div style="display:flex;flex-direction:column;gap:12px">
+                  <div style="display:flex;flex-direction:column;align-items:stretch;gap:16px">
+                    <div style="width:100%">
+                      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px">
+                        <span style="color:#09090b">普通会员</span>
+                        <span style="color:#71717a">62%</span>
+                      </div>
+                      <div style="height:8px;border-radius:999px;background:rgba(0,0,0,0.07);overflow:hidden">
+                        <div style="height:100%;border-radius:999px;background:#2563eb;width:62%">
+
+                        </div>
+                      </div>
+                    </div>
+                    <div style="width:100%">
+                      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px">
+                        <span style="color:#09090b">银卡会员</span>
+                        <span style="color:#71717a">24%</span>
+                      </div>
+                      <div style="height:8px;border-radius:999px;background:rgba(0,0,0,0.07);overflow:hidden">
+                        <div style="height:100%;border-radius:999px;background:#2563eb;width:24%">
+
+                        </div>
+                      </div>
+                    </div>
+                    <div style="width:100%">
+                      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px">
+                        <span style="color:#09090b">金卡会员</span>
+                        <span style="color:#71717a">10%</span>
+                      </div>
+                      <div style="height:8px;border-radius:999px;background:rgba(0,0,0,0.07);overflow:hidden">
+                        <div style="height:100%;border-radius:999px;background:#2563eb;width:10%">
+
+                        </div>
+                      </div>
+                    </div>
+                    <div style="width:100%">
+                      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px">
+                        <span style="color:#09090b">黑钻会员</span>
+                        <span style="color:#71717a">4%</span>
+                      </div>
+                      <div style="height:8px;border-radius:999px;background:rgba(0,0,0,0.07);overflow:hidden">
+                        <div style="height:100%;border-radius:999px;background:#2563eb;width:4%">
+
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div style="flex:2px;min-width:0px">
+              <div style="background:#fff;border-radius:10px;border:1px solid rgba(0,0,0,0.06);box-shadow:0 1px 3px rgba(0,0,0,0.05);padding:24px">
+                <div style="font-weight:600px;font-size:15px;color:#09090b;margin-bottom:12px">最近注册客户</div>
+                <div style="display:flex;flex-direction:column;gap:12px">
+                  <div style="width:100%;overflow-x:auto">
+                    <table style="width:100%;font-size:14px;border-collapse:collapse">
+                      <thead>
+                        <tr style="border-bottom:1px solid rgba(0,0,0,0.07)">
+                          <th style="text-align:left;font-weight:500px;color:#71717a;padding:10px 12px;white-space:nowrap">客户</th>
+                          <th style="text-align:left;font-weight:500px;color:#71717a;padding:10px 12px;white-space:nowrap">等级</th>
+                          <th style="text-align:left;font-weight:500px;color:#71717a;padding:10px 12px;white-space:nowrap">订单数</th>
+                          <th style="text-align:left;font-weight:500px;color:#71717a;padding:10px 12px;white-space:nowrap">消费总额</th>
+                          <th style="text-align:left;font-weight:500px;color:#71717a;padding:10px 12px;white-space:nowrap">最近下单</th>
+                          <th style="text-align:left;font-weight:500px;color:#71717a;padding:10px 12px;white-space:nowrap">状态</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr style="border-bottom:1px solid rgba(0,0,0,0.04)">
+                          <td style="padding:12px;white-space:nowrap">
+                            <span style="display:flex;align-items:center;gap:10px">
+                              <span style="width:28px;height:28px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600px;color:#fff;background:linear-gradient(135deg,#f093fb,#f5576c)">陈</span>
+                              <span style="color:#09090b">陈静</span>
+                            </span>
+                          </td>
+                          <td style="padding:12px;color:#09090b;white-space:nowrap">金卡会员</td>
+                          <td style="padding:12px;color:#09090b;white-space:nowrap">23</td>
+                          <td style="padding:12px;color:#09090b;white-space:nowrap">¥18,264</td>
+                          <td style="padding:12px;color:#09090b;white-space:nowrap">2024-11-01 10:23</td>
+                          <td style="padding:12px;white-space:nowrap">
+                            <span style="padding:2px 8px;border-radius:999px;font-size:12px;font-weight:500px;background:rgba(0,0,0,0.05);color:#71717a">活跃</span>
+                          </td>
+                        </tr>
+                        <tr style="border-bottom:1px solid rgba(0,0,0,0.04)">
+                          <td style="padding:12px;white-space:nowrap">
+                            <span style="display:flex;align-items:center;gap:10px">
+                              <span style="width:28px;height:28px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600px;color:#fff;background:linear-gradient(135deg,#f093fb,#f5576c)">李</span>
+                              <span style="color:#09090b">李伟</span>
+                            </span>
+                          </td>
+                          <td style="padding:12px;color:#09090b;white-space:nowrap">普通会员</td>
+                          <td style="padding:12px;color:#09090b;white-space:nowrap">5</td>
+                          <td style="padding:12px;color:#09090b;white-space:nowrap">¥2,998</td>
+                          <td style="padding:12px;color:#09090b;white-space:nowrap">2024-10-28 14:11</td>
+                          <td style="padding:12px;white-space:nowrap">
+                            <span style="padding:2px 8px;border-radius:999px;font-size:12px;font-weight:500px;background:rgba(0,0,0,0.05);color:#71717a">活跃</span>
+                          </td>
+                        </tr>
+                        <tr style="border-bottom:1px solid rgba(0,0,0,0.04)">
+                          <td style="padding:12px;white-space:nowrap">
+                            <span style="display:flex;align-items:center;gap:10px">
+                              <span style="width:28px;height:28px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600px;color:#fff;background:linear-gradient(135deg,#667eea,#764ba2)">王</span>
+                              <span style="color:#09090b">王芳</span>
+                            </span>
+                          </td>
+                          <td style="padding:12px;color:#09090b;white-space:nowrap">银卡会员</td>
+                          <td style="padding:12px;color:#09090b;white-space:nowrap">12</td>
+                          <td style="padding:12px;color:#09090b;white-space:nowrap">¥7,540</td>
+                          <td style="padding:12px;color:#09090b;white-space:nowrap">2024-11-01 09:45</td>
+                          <td style="padding:12px;white-space:nowrap">
+                            <span style="padding:2px 8px;border-radius:999px;font-size:12px;font-weight:500px;background:rgba(0,0,0,0.05);color:#71717a">活跃</span>
+                          </td>
+                        </tr>
+                        <tr style="border-bottom:1px solid rgba(0,0,0,0.04)">
+                          <td style="padding:12px;white-space:nowrap">
+                            <span style="display:flex;align-items:center;gap:10px">
+                              <span style="width:28px;height:28px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600px;color:#fff;background:linear-gradient(135deg,#4facfe,#00f2fe)">张</span>
+                              <span style="color:#09090b">张强</span>
+                            </span>
+                          </td>
+                          <td style="padding:12px;color:#09090b;white-space:nowrap">黑钻会员</td>
+                          <td style="padding:12px;color:#09090b;white-space:nowrap">45</td>
+                          <td style="padding:12px;color:#09090b;white-space:nowrap">¥45,200</td>
+                          <td style="padding:12px;color:#09090b;white-space:nowrap">2024-10-30 18:02</td>
+                          <td style="padding:12px;white-space:nowrap">
+                            <span style="padding:2px 8px;border-radius:999px;font-size:12px;font-weight:500px;background:rgba(0,0,0,0.05);color:#71717a">沉睡</span>
+                          </td>
+                        </tr>
+                        <tr style="border-bottom:1px solid rgba(0,0,0,0.04)">
+                          <td style="padding:12px;white-space:nowrap">
+                            <span style="display:flex;align-items:center;gap:10px">
+                              <span style="width:28px;height:28px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600px;color:#fff;background:linear-gradient(135deg,#43e97b,#38f9d7)">刘</span>
+                              <span style="color:#09090b">刘洋</span>
+                            </span>
+                          </td>
+                          <td style="padding:12px;color:#09090b;white-space:nowrap">普通会员</td>
+                          <td style="padding:12px;color:#09090b;white-space:nowrap">2</td>
+                          <td style="padding:12px;color:#09090b;white-space:nowrap">¥396</td>
+                          <td style="padding:12px;color:#09090b;white-space:nowrap">2024-10-15 11:30</td>
+                          <td style="padding:12px;white-space:nowrap">
+                            <span style="padding:2px 8px;border-radius:999px;font-size:12px;font-weight:500px;background:rgba(0,0,0,0.05);color:#71717a">流失</span>
+                          </td>
+                        </tr>
+                        <tr style="border-bottom:1px solid rgba(0,0,0,0.04)">
+                          <td style="padding:12px;white-space:nowrap">
+                            <span style="display:flex;align-items:center;gap:10px">
+                              <span style="width:28px;height:28px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600px;color:#fff;background:linear-gradient(135deg,#4facfe,#00f2fe)">赵</span>
+                              <span style="color:#09090b">赵敏</span>
+                            </span>
+                          </td>
+                          <td style="padding:12px;color:#09090b;white-space:nowrap">金卡会员</td>
+                          <td style="padding:12px;color:#09090b;white-space:nowrap">18</td>
+                          <td style="padding:12px;color:#09090b;white-space:nowrap">¥12,340</td>
+                          <td style="padding:12px;color:#09090b;white-space:nowrap">2024-11-01 12:05</td>
+                          <td style="padding:12px;white-space:nowrap">
+                            <span style="padding:2px 8px;border-radius:999px;font-size:12px;font-weight:500px;background:rgba(0,0,0,0.05);color:#71717a">活跃</span>
+                          </td>
+                        </tr>
+                        <tr style="border-bottom:1px solid rgba(0,0,0,0.04)">
+                          <td style="padding:12px;white-space:nowrap">
+                            <span style="display:flex;align-items:center;gap:10px">
+                              <span style="width:28px;height:28px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600px;color:#fff;background:linear-gradient(135deg,#f093fb,#f5576c)">孙</span>
+                              <span style="color:#09090b">孙磊</span>
+                            </span>
+                          </td>
+                          <td style="padding:12px;color:#09090b;white-space:nowrap">银卡会员</td>
+                          <td style="padding:12px;color:#09090b;white-space:nowrap">9</td>
+                          <td style="padding:12px;color:#09090b;white-space:nowrap">¥6,780</td>
+                          <td style="padding:12px;color:#09090b;white-space:nowrap">2024-10-29 20:17</td>
+                          <td style="padding:12px;white-space:nowrap">
+                            <span style="padding:2px 8px;border-radius:999px;font-size:12px;font-weight:500px;background:rgba(0,0,0,0.05);color:#71717a">活跃</span>
+                          </td>
+                        </tr>
+                        <tr style="border-bottom:1px solid rgba(0,0,0,0.04)">
+                          <td style="padding:12px;white-space:nowrap">
+                            <span style="display:flex;align-items:center;gap:10px">
+                              <span style="width:28px;height:28px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600px;color:#fff;background:linear-gradient(135deg,#667eea,#764ba2)">周</span>
+                              <span style="color:#09090b">周芸</span>
+                            </span>
+                          </td>
+                          <td style="padding:12px;color:#09090b;white-space:nowrap">普通会员</td>
+                          <td style="padding:12px;color:#09090b;white-space:nowrap">4</td>
+                          <td style="padding:12px;color:#09090b;white-space:nowrap">¥1,256</td>
+                          <td style="padding:12px;color:#09090b;white-space:nowrap">2024-09-22 16:40</td>
+                          <td style="padding:12px;white-space:nowrap">
+                            <span style="padding:2px 8px;border-radius:999px;font-size:12px;font-weight:500px;background:rgba(0,0,0,0.05);color:#71717a">流失</span>
+                          </td>
+                        </tr>
+                        <tr style="border-bottom:1px solid rgba(0,0,0,0.04)">
+                          <td style="padding:12px;white-space:nowrap">
+                            <span style="display:flex;align-items:center;gap:10px">
+                              <span style="width:28px;height:28px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600px;color:#fff;background:linear-gradient(135deg,#a8edea,#fed6e3)">吴</span>
+                              <span style="color:#09090b">吴昊</span>
+                            </span>
+                          </td>
+                          <td style="padding:12px;color:#09090b;white-space:nowrap">金卡会员</td>
+                          <td style="padding:12px;color:#09090b;white-space:nowrap">14</td>
+                          <td style="padding:12px;color:#09090b;white-space:nowrap">¥9,360</td>
+                          <td style="padding:12px;color:#09090b;white-space:nowrap">2024-11-01 08:30</td>
+                          <td style="padding:12px;white-space:nowrap">
+                            <span style="padding:2px 8px;border-radius:999px;font-size:12px;font-weight:500px;background:rgba(0,0,0,0.05);color:#71717a">活跃</span>
+                          </td>
+                        </tr>
+                        <tr style="border-bottom:1px solid rgba(0,0,0,0.04)">
+                          <td style="padding:12px;white-space:nowrap">
+                            <span style="display:flex;align-items:center;gap:10px">
+                              <span style="width:28px;height:28px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600px;color:#fff;background:linear-gradient(135deg,#fa709a,#fee140)">郑</span>
+                              <span style="color:#09090b">郑爽</span>
+                            </span>
+                          </td>
+                          <td style="padding:12px;color:#09090b;white-space:nowrap">银卡会员</td>
+                          <td style="padding:12px;color:#09090b;white-space:nowrap">7</td>
+                          <td style="padding:12px;color:#09090b;white-space:nowrap">¥4,820</td>
+                          <td style="padding:12px;color:#09090b;white-space:nowrap">2024-10-27 15:55</td>
+                          <td style="padding:12px;white-space:nowrap">
+                            <span style="padding:2px 8px;border-radius:999px;font-size:12px;font-weight:500px;background:rgba(0,0,0,0.05);color:#71717a">活跃</span>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+<nav style="position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:99;display:flex;gap:4px;background:rgba(20,20,25,0.85);backdrop-filter:blur(8px);padding:6px;border-radius:999px;box-shadow:0 8px 30px rgba(0,0,0,0.25)"><a href="数据中心-甄选商城管理后台.html" style="padding:6px 14px;border-radius:999px;font-size:12px;text-decoration:none;color:rgba(255,255,255,0.75)">数据中心 - 甄选商城管理后台</a><a href="商品管理-甄选商城管理后台.html" style="padding:6px 14px;border-radius:999px;font-size:12px;text-decoration:none;color:rgba(255,255,255,0.75)">商品管理 - 甄选商城管理后台</a><a href="订单管理-甄选商城管理后台.html" style="padding:6px 14px;border-radius:999px;font-size:12px;text-decoration:none;color:rgba(255,255,255,0.75)">订单管理 - 甄选商城管理后台</a><a href="客户管理-甄选商城管理后台.html" style="padding:6px 14px;border-radius:999px;font-size:12px;text-decoration:none;background:#fff;color:#111;font-weight:600">客户管理 - 甄选商城管理后台</a><a href="营销分析-甄选商城管理后台.html" style="padding:6px 14px;border-radius:999px;font-size:12px;text-decoration:none;color:rgba(255,255,255,0.75)">营销分析 - 甄选商城管理后台</a></nav>
+</body>
+</html>
