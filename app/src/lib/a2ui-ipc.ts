@@ -6,10 +6,20 @@ import type { PresetId, SurfaceDoc } from "@contracts/a2ui";
 export const IPC_SOURCE = "a2ui-renderer";
 
 // parent → iframe
+export interface NodeDiff {
+  added: string[];
+  updated: string[];
+  removed: string[];
+}
+
 export type HostMessage =
   | { source: typeof IPC_SOURCE; type: "setSurface"; doc: SurfaceDoc; preset: PresetId }
   | { source: typeof IPC_SOURCE; type: "setInspect"; on: boolean }
-  | { source: typeof IPC_SOURCE; type: "highlight"; aid: string | null };
+  | { source: typeof IPC_SOURCE; type: "highlight"; aid: string | null }
+  /** M7 逐节点持久 Diff 着色:最近一次提交的增/改/删组件(按 aid) */
+  | { source: typeof IPC_SOURCE; type: "setDiff"; diff: NodeDiff | null }
+  /** M7 评论锚点气泡:未解决评论按 nodeId 定位渲染 */
+  | { source: typeof IPC_SOURCE; type: "setComments"; comments: { id: number; nodeId: string; body: string; authorName: string | null; resolved: boolean }[] };
 
 // iframe → parent
 export type RendererMessage =
@@ -21,6 +31,7 @@ export type RendererMessage =
       aids: string[];
       items: { aid: string; componentType: string }[];
     }
+  | { source: typeof IPC_SOURCE; type: "commentClick"; nodeId: string }
   | {
       /** inspect 模式下双击文本类组件:请求宿主在对应位置弹出内联文本编辑器 */
       source: typeof IPC_SOURCE;

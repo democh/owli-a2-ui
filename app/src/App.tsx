@@ -24,7 +24,8 @@ export default function App() {
         />
         <Route path="*" element={<NotFound />} />
       </Routes>
-      <Toaster position="bottom-right" />
+      {/* Agent 面板常驻右侧,bottom-right 会把 toast 叠在输入区/发送按钮上;bottom-center 只盖底部状态栏(纯展示) */}
+      <Toaster position="bottom-center" richColors />
     </>
   )
 }

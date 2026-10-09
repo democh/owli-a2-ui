@@ -11,7 +11,7 @@ import path from "path";
 import { TRPCError } from "@trpc/server";
 import { authedQuery, createRouter } from "../middleware";
 import { getDb } from "../queries/connection";
-import { requireProject } from "../queries/projects";
+import { requireProject, requireProjectRole } from "../queries/projects";
 import { deploys, pages } from "@db/schema";
 import type { SurfaceDoc } from "@contracts/a2ui";
 import { surfaceDocSchema } from "@contracts/a2ui";
@@ -130,7 +130,7 @@ export const publishRouter = createRouter({
       const rows = await db.select().from(deploys).where(eq(deploys.id, input.deployId)).limit(1);
       const dep = rows[0];
       if (!dep) throw new TRPCError({ code: "NOT_FOUND", message: "部署不存在" });
-      await requireProject(ctx.user.id, dep.projectId); // 归属校验
+      await requireProjectRole(ctx.user.id, dep.projectId, "owner"); // RBAC:仅 owner 可删除部署(Delete 矩阵)
       // slug 由服务端生成(dN 或自定义小写标识),双保险校验防路径穿越
       if (!/^[a-zA-Z0-9_-]+$/.test(dep.slug)) throw new TRPCError({ code: "BAD_REQUEST", message: "非法部署标识" });
       await rm(path.join(DEPLOY_ROOT, String(dep.projectId), dep.slug), { recursive: true, force: true });
@@ -142,7 +142,7 @@ export const publishRouter = createRouter({
   deploys: authedQuery
     .input(z.object({ projectId: z.number() }))
     .query(async ({ ctx, input }) => {
-      await requireProject(ctx.user.id, input.projectId);
+      await requireProjectRole(ctx.user.id, input.projectId, "viewer"); // RBAC:viewer 可读部署历史
       const rows = await getDb()
         .select()
         .from(deploys)

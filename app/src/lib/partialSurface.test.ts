@@ -3,7 +3,7 @@
  * 覆盖:完整文档 / 截断文档 / markdown 围栏 / root 回退 / children 悬空引用 / 非法组件
  */
 import { describe, expect, it } from "vitest";
-import { parsePartialPages, parsePartialSurface } from "./partialSurface";
+import { mergePreviewDelta, parsePartialOps, parsePartialPages, parsePartialSurface } from "./partialSurface";
 
 const OPTS = { preset: "shadcn" as const, device: "desktop" as const };
 
@@ -175,5 +175,59 @@ describe("parsePartialPages", () => {
     const docs = parsePartialPages(JSON.stringify({ version: "1.0", pages: [PAGE_A] }), OPTS);
     expect(docs).toHaveLength(1);
     expect(docs[0]?.page.title).toBe("首页");
+  });
+});
+
+describe("parsePartialOps(ops 流式草稿解析)", () => {
+  it("完整 ops 数组全部解析", () => {
+    const raw = JSON.stringify({ ops: [{ op: "replaceProps", surfaceId: "s", id: "n1", props: { text: "A" } }, { op: "replaceProps", surfaceId: "s", id: "n2", props: { text: "B" } }] });
+    const ops = parsePartialOps(raw);
+    expect(ops).toHaveLength(2);
+    expect((ops[0] as { id: string }).id).toBe("n1");
+  });
+
+  it("最后一个 op 未闭合:只返回已闭合部分(流式核心语义)", () => {
+    const raw = `{"ops":[{"op":"replaceProps","surfaceId":"s","id":"n1","props":{"text":"A"}},{"op":"replaceProps","surfaceId":"s","id":"n2","props":{"te`;
+    const ops = parsePartialOps(raw);
+    expect(ops).toHaveLength(1);
+    expect((ops[0] as { id: string }).id).toBe("n1");
+  });
+
+  it("带 markdown 围栏与多余前缀仍可解析", () => {
+    const raw = '```json\n{"ops":[{"op":"addNode","surfaceId":"s","id":"x","parentId":"root","node":{"type":"Text","props":{},"children":[]}}]}\n```';
+    expect(parsePartialOps(raw)).toHaveLength(1);
+  });
+
+  it("非 ops 结构与空串返回空数组", () => {
+    expect(parsePartialOps("")).toEqual([]);
+    expect(parsePartialOps('{"other":1}')).toEqual([]);
+    expect(parsePartialOps('{"ops": [{"op":"a"}')).toEqual([{ op: "a" }]);
+  });
+});
+
+describe("mergePreviewDelta(增量预览合并)", () => {
+  it("upserts 合并进累积文档,children 悬空引用被过滤", () => {
+    const base = mergePreviewDelta(null, {
+      root: { type: "Section", props: {}, children: ["t1", "ghost"] },
+      t1: { type: "Title", props: { text: "标题" }, children: [] },
+    }, { root: "root", title: "首页", device: "desktop" });
+    expect(base.root).toBe("root");
+    // root.children 保留悬空引用(渲染端容错,等后续帧补齐)
+    expect(base.components.root.children).toEqual(["t1", "ghost"]);
+    expect(base.components.t1.children).toEqual([]);
+
+    const merged = mergePreviewDelta(base, {
+      ghost: { type: "Text", props: { text: "正文" }, children: [] },
+    }, {});
+    expect(merged.components.ghost!.type).toBe("Text"); // ghost 到达,引用生效
+    expect(merged.page.title).toBe("首页");
+  });
+
+  it("meta 覆盖标题/设备;theme 缺省沿用 base", () => {
+    const base = mergePreviewDelta(null, { root: { type: "Col", props: {}, children: [] } }, { root: "root", title: "A", device: "desktop" });
+    const next = mergePreviewDelta(base, { root: { type: "Col", props: {}, children: [] } }, { root: "root", title: "B", device: "mobile" });
+    expect(next.page.title).toBe("B");
+    expect(next.page.device).toBe("mobile");
+    expect(next.theme).toEqual(base.theme);
   });
 });

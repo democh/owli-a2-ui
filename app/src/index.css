@@ -106,3 +106,80 @@
 .infinite-viewer-scroll-bar {
   display: none !important;
 }
+/* ===========================================================================
+   全局紧凑模式(.a2-compact,由 uiStore.compact 驱动,Workspace 根节点挂载)
+   密度策略对应 StyleDirection.layoutPreferences.density=compact:
+   收紧结构高度与卡片间距,不缩小正文字号以保证可读性。
+   =========================================================================== */
+.a2-compact header.h-12 {
+  height: 2.5rem; /* 40px */
+}
+.a2-compact footer.h-7 {
+  height: 1.5rem; /* 24px */
+}
+.a2-compact .h-\[44px\] {
+  height: 2.25rem; /* 36px:Agent 头部 */
+}
+/* Agent 输入区:减少行高与间距 */
+.a2-compact .a2-agent-input textarea {
+  min-height: 0;
+  font-size: 12px;
+  padding: 0.375rem 0.5rem;
+}
+.a2-compact .a2-agent-input textarea {
+  height: 3.4rem;
+}
+/* 卡片与区块间距收紧 */
+.a2-compact .a2-panel > div {
+  gap: 0.5rem;
+}
+.a2-compact .a2-panel .p-3 {
+  padding: 0.5rem;
+}
+.a2-compact .a2-panel .p-2\.5 {
+  padding: 0.5rem;
+}
+.a2-compact .a2-panel .space-y-3 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 0.5rem;
+}
+.a2-compact .a2-panel .space-y-2 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 0.375rem;
+}
+/* Tab 与按钮更贴边 */
+.a2-compact .a2-panel .py-1 {
+  padding-top: 0.125rem;
+  padding-bottom: 0.125rem;
+}
+/* 左侧资源面板与状态栏文字密度 */
+.a2-compact footer {
+  letter-spacing: 0;
+}
+/* 左栏页面行:紧凑密度下行高与缩略块收紧 */
+.a2-compact .a2-panel .py-2 {
+  padding-top: 0.375rem;
+  padding-bottom: 0.375rem;
+}
+.a2-compact .a2-panel .h-8 {
+  height: 1.75rem;
+}
+.a2-compact .a2-panel .mb-1 {
+  margin-bottom: 0.125rem;
+}
+/* Agent 面板 Tabs 行更薄 */
+.a2-compact .a2-panel .border-b.px-2 {
+  padding-top: 0.25rem;
+  padding-bottom: 0.25rem;
+}
+/* ---- Sonner toast:v2 默认 16px 标题在工作台里过大且喧宾夺主,统一收敛字号
+   (元素+属性选择器优先级高于 sonner 内置样式,覆盖全站所有 toast 调用点) ---- */
+[data-sonner-toast] {
+  font-size: 12px;
+}
+[data-sonner-toast] [data-title] {
+  font-size: 12px;
+  font-weight: 500;
+}
+[data-sonner-toast] [data-description] {
+  font-size: 11px;
+  opacity: 0.8;
+}

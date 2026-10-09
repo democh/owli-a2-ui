@@ -109,6 +109,16 @@ export const CATALOG_GROUPS: { group: string; types: string[] }[] = [
 export const CATALOG_TYPES = CATALOG_GROUPS.flatMap((g) => g.types);
 export const catalogTypeSchema = z.enum(CATALOG_TYPES as [string, ...string[]]);
 
+/**
+ * 可包含子节点的容器类型(其余 Catalog 类型视为叶子)。
+ * Validation layout 层与左栏组件库插入目标判定共用;前端不引 api 层,故放契约层。
+ */
+export const CONTAINER_TYPES = new Set<string>([
+  "Navbar", "Hero", "Section", "Container", "Row", "Col", "Grid", "Card", "Footer", "Tabs",
+  "SidebarLayout", "List", "Timeline", "Form", "ListItem", "Table",
+  "FeatureGrid", "PricingTable", "FAQ", "CTASection", "StatsRow",
+]);
+
 // ---------------------------------------------------------------------------
 // A2UI 文档
 // ---------------------------------------------------------------------------

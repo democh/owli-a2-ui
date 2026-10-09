@@ -1,13 +1,11 @@
 import { Hono } from "hono";
 import type { Context } from "hono";
 import { bodyLimit } from "hono/body-limit";
+import { streamSSE } from "hono/streaming";
 import type { HttpBindings } from "@hono/node-server";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
-import { z } from "zod";
 import { appRouter } from "./router";
 import { createContext, requireLocalUser } from "./context";
-import { executeChatGenerate } from "./routers/studio";
-import { imageRefSchema } from "@contracts/a2ui";
 import { env } from "./lib/env";
 
 const app = new Hono<{ Bindings: HttpBindings }>();
@@ -15,75 +13,124 @@ const app = new Hono<{ Bindings: HttpBindings }>();
 // 请求体上限 10MB:正常请求(SSE 提示词 / 批量撤销快照)在 KB~低 MB 级,50MB 只会放大 DoS 面
 app.use(bodyLimit({ maxSize: 10 * 1024 * 1024 }));
 
-// ---------------------------------------------------------------------------
-// SSE 流式对话生成:实时推送 Agent 执行步骤,结束时下发完整结果
-// 事件: step(执行步骤) / result(最终结果) / error(失败)
-// ---------------------------------------------------------------------------
-const streamBodySchema = z.object({
-  projectId: z.number(),
-  prompt: z.string().min(1).max(4000),
-  chips: z
-    .array(
-      z.discriminatedUnion("kind", [
-        z.object({ kind: z.literal("page"), pageId: z.string(), title: z.string() }),
-        z.object({ kind: z.literal("element"), pageId: z.string(), aid: z.string(), label: z.string() }),
-      ]),
-    )
-    .default([]),
-  conversationId: z.number().nullish(),
-  /** 参考图片(服务端会按 vision 设置二次过滤;最多 3 张) */
-  images: z.array(imageRefSchema).max(3).optional(),
-  /** 图片缩略 dataUrl,仅用于消息持久化回显 */
-  imageThumbs: z.array(z.string().max(300_000)).max(3).optional(),
-});
-
-app.post("/api/chat/stream", async (c) => {
-  let user;
+// 导出产物下载(M5):/api/exports/:exportId/download
+app.get("/api/exports/:exportId/download", async (c) => {
   try {
-    user = await requireLocalUser();
+    await requireLocalUser();
   } catch {
     return c.json({ error: "unauthorized" }, 401);
   }
-  const parsed = streamBodySchema.safeParse(await c.req.json().catch(() => null));
-  if (!parsed.success) return c.json({ error: "bad request" }, 400);
-  const params = parsed.data;
+  const exportId = c.req.param("exportId");
+  if (!/^exp_[a-z0-9_]+$/.test(exportId)) return c.notFound(); // id 格式 exp_<ts36>_<rand36>,允许下划线
+  const { getDb } = await import("./queries/connection");
+  const { exportFiles } = await import("@db/schema");
+  const { eq } = await import("drizzle-orm");
+  const row = getDb()
+    .select()
+    .from(exportFiles)
+    .where(eq(exportFiles.exportId, exportId))
+    .limit(1)
+    .get();
+  if (!row) return c.notFound();
+  const { readFile } = await import("fs/promises");
+  try {
+    const buf = await readFile(row.zipPath);
+    return c.body(new Uint8Array(buf), 200, {
+      "Content-Type": "application/zip",
+      "Content-Disposition": `attachment; filename="${row.exportId}.zip"`,
+    });
+  } catch {
+    return c.notFound();
+  }
+});
 
-  const encoder = new TextEncoder();
-  const stream = new ReadableStream<Uint8Array>({
-    async start(controller) {
-      const send = (payload: unknown) => {
-        try {
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify(payload)}\n\n`));
-        } catch { /* 客户端已断开 */ }
-      };
-      try {
-        const out = await executeChatGenerate(
-          user.id,
-          { ...params, signal: c.req.raw.signal },
-          (step) => send({ type: "step", step }),
-          (draft) => send({ type: "draft", mode: draft.mode, pageId: draft.pageId, delta: draft.delta }),
-        );
-        send({
-          type: "result",
-          result: out.result,
-          plan: out.plan ?? null,
-          appliedPages: out.appliedPages,
-          conversationId: out.conversationId,
-        });
-      } catch (e) {
-        send({ type: "error", message: (e as Error).message.slice(0, 300) });
-      } finally {
-        try { controller.close(); } catch { /* ignore */ }
-      }
-    },
-  });
-  return new Response(stream, {
-    headers: {
-      "Content-Type": "text/event-stream; charset=utf-8",
-      "Cache-Control": "no-cache, no-transform",
-      Connection: "keep-alive",
-      "X-Accel-Buffering": "no",
-    },
+// 模板封面(M7 模板库):/api/templates/:templateId/cover → 首页静态 HTML 缩略
+// 无封面的老模板在首次访问时按需懒生成并回写
+app.get("/api/templates/:templateId/cover", async (c) => {
+  try {
+    await requireLocalUser();
+  } catch {
+    return c.json({ error: "unauthorized" }, 401);
+  }
+  const templateId = c.req.param("templateId");
+  if (!/^tpl_[a-z0-9_]+$/.test(templateId)) return c.notFound();
+  const { getDb } = await import("./queries/connection");
+  const { irTemplates } = await import("@db/schema");
+  const { eq } = await import("drizzle-orm");
+  const db = getDb();
+  const row = db.select().from(irTemplates).where(eq(irTemplates.templateId, templateId)).limit(1).get();
+  if (!row) return c.notFound();
+  let coverHtml = row.coverHtml;
+  if (!coverHtml) {
+    const { generateTemplateCoverHtml } = await import("./templates/cover");
+    coverHtml = generateTemplateCoverHtml(row.name, JSON.parse(row.doc)) ?? "";
+    if (coverHtml) {
+      db.update(irTemplates).set({ coverHtml }).where(eq(irTemplates.templateId, templateId)).run();
+    } else {
+      return c.notFound();
+    }
+  }
+  return c.html(coverHtml);
+});
+
+// Run 事件流 SSE(文档 §14.3 断线恢复;/api/runs/:runId/stream,客户端见 src/lib/runStream.ts)
+// 连接即重放 run_events 历史 + 订阅实时推送;订阅与重放间隙的重叠事件由客户端 seq 去重兜底
+app.get("/api/runs/:runId/stream", async (c) => {
+  try {
+    await requireLocalUser();
+  } catch {
+    return c.json({ error: "unauthorized" }, 401);
+  }
+  const runId = c.req.param("runId");
+  if (!/^run_[a-z0-9_]+$/.test(runId)) return c.notFound();
+  const { getDb } = await import("./queries/connection");
+  const { runs: runsTable } = await import("@db/schema");
+  const { eq } = await import("drizzle-orm");
+  const row = getDb()
+    .select({ projectId: runsTable.projectId })
+    .from(runsTable)
+    .where(eq(runsTable.runId, runId))
+    .limit(1)
+    .get();
+  if (!row) return c.notFound();
+  const user = await requireLocalUser();
+  const { requireProjectRole } = await import("./queries/projects");
+  try {
+    await requireProjectRole(user.id, row.projectId, "viewer");
+  } catch {
+    return c.json({ error: "forbidden" }, 403);
+  }
+  const { RunManager } = await import("./agent/run/RunManager");
+  const { isTerminal } = await import("./agent/run/RunStateMachine");
+  return streamSSE(c, async (stream) => {
+    let open = true;
+    // 先订阅后重放:间隙期实时事件可能与历史重叠,客户端按 seq 去重幂等
+    const unsub = RunManager.subscribe(runId, (e) => {
+      if (open) stream.writeSSE({ data: JSON.stringify(e) }).catch(() => {});
+    });
+    stream.onAbort(() => {
+      open = false;
+      unsub();
+    });
+    const history = RunManager.replay(runId);
+    for (const e of history) {
+      if (!open) return;
+      await stream.writeSSE({ data: JSON.stringify(e) });
+    }
+    // 服务重启截断:内存执行态已丢且历史未达终态 → 补发合成失败事件,避免客户端无限等待
+    const last = history[history.length - 1];
+    // 终态判定:显式终态事件类型,或 run.state 已迁移至终态状态(状态机路径以 run.state 收尾)
+    const lastStatus = last?.type === "run.state" ? last.status : undefined;
+    const reachedTerminal =
+      !!last && (last.type === "design.explanation" || last.type === "run.cancelled" || last.type === "run.failed" || (lastStatus != null && isTerminal(lastStatus)));
+    if (!RunManager.context(runId) && !reachedTerminal) {
+      await stream.writeSSE({
+        data: JSON.stringify({ type: "run.failed", runId, seq: (last?.seq ?? -1) + 1, message: "服务已重启,本次运行中断", retryable: false }),
+      });
+    }
+    while (open) {
+      await stream.sleep(15_000); // 保活
+    }
   });
 });
 

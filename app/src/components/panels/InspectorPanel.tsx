@@ -3,10 +3,11 @@
  * 所有修改走与 AI 编辑完全相同的 op 链路(replaceProps → 持久化 → 可撤销)。
  */
 import { useState } from "react";
-import { Crosshair, Trash2 } from "lucide-react";
+import { Blocks, Crosshair, MessageSquarePlus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useWorkspace } from "@/stores/workspaceStore";
 import { usePageOps } from "@/hooks/usePageOps";
+import { trpc } from "@/providers/trpc";
 
 /** 图标库(与 props-guide.md 保持一致) */
 const ICON_OPTIONS = "activity, award, arrow-right, chart, bell, bookmark, check, chevron-right, clock, compass, download, eye, flame, gift, globe, grid, heart, home, image, line-chart, lock, map, menu, message, moon, palette, play, plug, plus, plus-circle, rocket, search, settings, shield, shopping-cart, sparkles, star, target, trending-up, user, users, wallet, zap".split(", ");
@@ -96,6 +97,9 @@ export function InspectorPanel() {
         )}
       </div>
 
+      {/* M7 组件实例:定义为组件 + 插入实例清单 */}
+      <ComponentDefsSection projectId={page.projectId} surfaceId={page.surfaceId ?? ""} rootId={sel.aid} rootType={node.type} />
+
       {/* props 表单 */}
       <div className="flex flex-col gap-3 p-3">
         {Object.entries(node.props).map(([prop, value]) => (
@@ -110,6 +114,193 @@ export function InspectorPanel() {
         {!Object.keys(node.props).length && (
           <div className="py-4 text-center text-xs text-neutral-400">该组件没有可编辑属性</div>
         )}
+      </div>
+
+      {/* M7 协作评论:当前页面/元素评论流(点击条目定位到锚点组件) */}
+      <CommentsSection projectId={page.projectId} pageId={page.id} surfaceId={page.surfaceId ?? ""} nodeId={sel.aid} />
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// M7 组件实例入口:把选中子树定义为组件;从定义清单插入实例
+// ---------------------------------------------------------------------------
+function ComponentDefsSection({ projectId, surfaceId, rootId, rootType }: {
+  projectId: number;
+  surfaceId: string;
+  rootId: string;
+  rootType: string;
+}) {
+  const utils = trpc.useUtils();
+  const listQ = trpc.designDefs.list.useQuery({ projectId });
+  const defineMut = trpc.designDefs.define.useMutation({
+    onSuccess: (r) => {
+      utils.workspace.get.invalidate({ projectId });
+      toast.success(`已定义为组件「${r.defId}」(revision ${r.revision})`);
+    },
+    onError: (e) => toast.error(e.message.slice(0, 140)),
+  });
+  const insertMut = trpc.designDefs.insertInstance.useMutation({
+    onSuccess: (r) => {
+      utils.workspace.get.invalidate({ projectId });
+      toast.success(`已插入实例 (revision ${r.revision})`);
+    },
+    onError: (e) => toast.error(e.message.slice(0, 140)),
+  });
+  const [defName, setDefName] = useState("");
+  const [pickDef, setPickDef] = useState("");
+
+  const defs = listQ.data ?? [];
+  void rootType;
+
+  return (
+    <div className="border-b border-neutral-100 px-3 py-2.5">
+      <div className="flex items-center gap-1.5">
+        <input
+          value={defName} onChange={(e) => setDefName(e.target.value)}
+          placeholder={`组件名(如 ${rootType})`}
+          className="min-w-0 flex-1 rounded-lg border border-neutral-200 px-2 py-1 text-[11px] outline-none focus:border-indigo-400"
+        />
+        <button
+          title="把该组件子树保存为可复用组件定义"
+          disabled={!defName.trim() || defineMut.isPending}
+          onClick={() => {
+            if (confirm(`把「#${rootId}」及其子树定义为组件「${defName.trim()}」?`)) {
+              defineMut.mutate({ projectId, surfaceId, rootId, name: defName.trim() });
+            }
+          }}
+          className="flex items-center gap-1 rounded-lg bg-neutral-800 px-2 py-1 text-[11px] font-medium text-white transition hover:bg-neutral-700 disabled:opacity-40">
+          <Blocks size={12} /> 定义为组件
+        </button>
+      </div>
+      {defs.length > 0 && (
+        <div className="mt-1.5 flex items-center gap-1.5">
+          <select
+            value={pickDef} onChange={(e) => setPickDef(e.target.value)}
+            className="min-w-0 flex-1 rounded-lg border border-neutral-200 bg-white px-2 py-1 text-[11px] outline-none focus:border-indigo-400">
+            <option value="">插入实例…</option>
+            {defs.map((d) => <option key={d.defId} value={d.defId}>{d.name}({d.rootType})</option>)}
+          </select>
+          <button
+            disabled={!pickDef || insertMut.isPending}
+            onClick={() => insertMut.mutate({ projectId, surfaceId, instanceOf: pickDef })}
+            className="rounded-lg border border-indigo-200 px-2 py-1 text-[11px] font-medium text-indigo-600 transition hover:bg-indigo-50 disabled:opacity-40">
+            插入
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// M7 协作评论:页面/元素评论流(viewer 可读,editor 可写)
+// ---------------------------------------------------------------------------
+function CommentsSection({ projectId, pageId, surfaceId, nodeId }: { projectId: number; pageId: number; surfaceId: string; nodeId?: string }) {
+  const [draft, setDraft] = useState("");
+  /** 讨论串(演进项 §2.1):回复目标 + 展开状态 */
+  const [replyTo, setReplyTo] = useState<{ id: number; name: string } | null>(null);
+  const [expanded, setExpanded] = useState<Record<number, boolean>>({});
+  const requestHighlight = useWorkspace((s) => s.requestHighlight);
+  const utils = trpc.useUtils();
+  const invalidate = () => utils.comments.list.invalidate({ projectId, surfaceId });
+  const listQ = trpc.comments.list.useQuery({ projectId, surfaceId, nodeId });
+  const addMut = trpc.comments.add.useMutation({
+    onSuccess: () => { setDraft(""); setReplyTo(null); invalidate(); },
+    onError: (e) => toast.error(e.message.slice(0, 140)),
+  });
+  const resolveMut = trpc.comments.resolve.useMutation({
+    onSuccess: invalidate,
+    onError: (e) => toast.error(e.message.slice(0, 140)),
+  });
+
+  const all = listQ.data ?? [];
+  const roots = all.filter((c) => !c.parentId);
+  const repliesOf = (rootId: number) => all.filter((c) => c.parentId === rootId).sort((a, b) => a.id - b.id);
+  const send = () => {
+    if (!draft.trim()) return;
+    addMut.mutate({
+      projectId,
+      surfaceId,
+      nodeId: replyTo ? all.find((c) => c.id === replyTo.id)?.nodeId ?? nodeId : nodeId,
+      body: draft.trim(),
+      parentId: replyTo?.id,
+    });
+  };
+
+  const renderCard = (c: (typeof all)[number], isReply: boolean) => (
+    <div
+      key={c.id}
+      onClick={() => { if (c.nodeId) requestHighlight(pageId, c.nodeId); }}
+      className={`cursor-pointer rounded-lg border px-2 py-1.5 text-[11px] transition hover:border-indigo-200 ${c.resolved ? "border-emerald-100 bg-emerald-50/40 text-neutral-400" : "border-neutral-100 bg-neutral-50/60"} ${isReply ? "ml-4 border-dashed" : ""}`}
+      title={c.nodeId ? "点击定位到锚点组件" : undefined}
+    >
+      <div className="flex items-center justify-between">
+        <span className="font-medium text-neutral-600">{c.authorName ?? `用户 ${c.authorId}`}</span>
+        {!isReply && (
+          <button
+            title={c.resolved ? "标记未解决" : "标记已解决"}
+            onClick={(e) => { e.stopPropagation(); resolveMut.mutate({ projectId, commentId: c.id, resolved: !c.resolved }); }}
+            className="text-[10px] text-indigo-500 transition hover:text-indigo-700">
+            {c.resolved ? "未解决" : "解决"}
+          </button>
+        )}
+      </div>
+      <div className="mt-0.5 whitespace-pre-wrap text-neutral-600">{c.body}</div>
+      {!isReply && (
+        <button
+          onClick={(e) => { e.stopPropagation(); setReplyTo({ id: c.id, name: c.authorName ?? `用户 ${c.authorId}` }); }}
+          className="mt-1 text-[10px] text-neutral-400 transition hover:text-indigo-600">
+          回复
+        </button>
+      )}
+    </div>
+  );
+
+  return (
+    <div className="border-t border-neutral-100 px-3 py-2.5">
+      <div className="mb-1.5 flex items-center gap-1.5 text-[11px] font-medium text-neutral-500">
+        <MessageSquarePlus size={12} /> 评论
+        {roots.length ? <span className="rounded-full bg-neutral-100 px-1.5 text-[10px] text-neutral-400">{roots.length}</span> : null}
+      </div>
+      <div className="flex flex-col gap-1.5">
+        {roots.map((c) => {
+          const replies = repliesOf(c.id);
+          const open = !!expanded[c.id];
+          return (
+            <div key={c.id} className="flex flex-col gap-1">
+              {renderCard(c, false)}
+              {replies.length > 0 && (
+                <button
+                  onClick={() => setExpanded((m) => ({ ...m, [c.id]: !m[c.id] }))}
+                  className="ml-4 self-start text-[10px] text-neutral-400 transition hover:text-indigo-600">
+                  {open ? "收起" : ""} {replies.length} 条回复 {open ? "▲" : "▼"}
+                </button>
+              )}
+              {replies.length > 0 && open && replies.map((r) => renderCard(r, true))}
+            </div>
+          );
+        })}
+        {!all.length && <div className="py-2 text-center text-[10px] text-neutral-300">暂无评论</div>}
+      </div>
+      {replyTo && (
+        <div className="mt-1.5 flex items-center justify-between rounded-md bg-indigo-50/60 px-2 py-1 text-[10px] text-indigo-600 dark:bg-indigo-950/30">
+          <span>回复 @{replyTo.name}</span>
+          <button onClick={() => setReplyTo(null)} className="hover:text-indigo-800">取消</button>
+        </div>
+      )}
+      <div className="mt-1.5 flex items-center gap-1.5">
+        <input
+          value={draft} onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter" && draft.trim()) send(); }}
+          placeholder={replyTo ? `回复 @${replyTo.name},Enter 发送` : "写下评论,Enter 发送"}
+          className="min-w-0 flex-1 rounded-lg border border-neutral-200 px-2 py-1 text-[11px] outline-none focus:border-indigo-400" />
+        <button
+          disabled={!draft.trim() || addMut.isPending}
+          onClick={send}
+          className="rounded-lg bg-indigo-600 px-2.5 py-1 text-[11px] font-medium text-white transition hover:bg-indigo-500 disabled:opacity-40">
+          发送
+        </button>
       </div>
     </div>
   );

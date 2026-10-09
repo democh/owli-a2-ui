@@ -1,17 +1,23 @@
 import { z } from "zod";
-import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, notInArray, sql } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { rm } from "fs/promises";
 import path from "path";
 import { authedQuery, createRouter } from "../middleware";
 import { getDb } from "../queries/connection";
-import { requireProject } from "../queries/projects";
+import { requireProject, requireProjectRole } from "../queries/projects";
+import { usageSnapshot } from "../agent/runtime/BudgetManager";
+import { RunManager } from "../agent/run/RunManager";
+import { ensureInitialRevision } from "../command/commandService";
 import { env } from "../lib/env";
-import { conversations, deploys, llmCalls, messages, pages, projects, userSettings, versions } from "@db/schema";
-import type { ChatAction, ChatGenerateResult, ChatStep, DeviceId, ImageRef, PresetId, SurfaceDoc, VisionSetting } from "@contracts/a2ui";
-import { applyOps, chatActionSchema, DEVICE_IDS, imageRefSchema, planFromActions, PRESET_IDS, resolveVision, surfaceDocSchema } from "@contracts/a2ui";
-import { runAnalyze, runPipeline, type DraftChunk, type PipelineInput } from "../llm/pipeline";
-import type { ChatTurn } from "../llm/prompts";
+import { conversations, deploys, frames, llmCalls, messages, pageBoards, pages, projectMembers, projects, userSettings, versions } from "@db/schema";
+import {
+  alerts, auditLogs, clarificationRequests, clarificationResponses, comments, designBriefs, designDecisions, designPlans,
+  designProposals, designSkills, exportFiles, outboxEvents, projectRevisions, opBatches,
+  runEvents, runs, skillRuns, snapshots, styleDirections, uxReviewReports,
+} from "@db/schema";
+import type { DeviceId, PresetId, SurfaceDoc, VisionSetting } from "@contracts/a2ui";
+import { DEVICE_IDS, PRESET_IDS, resolveVision, surfaceDocSchema } from "@contracts/a2ui";
 
 // ---------------------------------------------------------------------------
 // helpers
@@ -141,10 +147,12 @@ export const projectsRouter = createRouter({
     .input(z.object({ name: z.string().min(1).max(100), preset: z.enum(PRESET_IDS as [PresetId, ...PresetId[]]).default("shadcn") }))
     .mutation(async ({ ctx, input }) => {
       const db = getDb();
-      // 事务:项目 + 起始页 + 初始快照,任一步失败整体回滚
+      // 事务:项目 + owner 成员行 + 起始页 + 初始快照,任一步失败整体回滚
       const projectId = db.transaction((tx) => {
         const r = tx.insert(projects).values({ userId: ctx.user.id, name: input.name, preset: input.preset }).run();
         const pid = Number(r.lastInsertRowid);
+        // RBAC:归属人自动注册为 owner 成员
+        tx.insert(projectMembers).values({ projectId: pid, userId: ctx.user.id, role: "owner" }).run();
         // 起始页:静态欢迎页,引导用户在 Agent 面板用 LLM 生成
         tx.insert(pages).values({
           projectId: pid,
@@ -159,13 +167,50 @@ export const projectsRouter = createRouter({
         snapshotVersion(tx as unknown as Db, pid, "项目创建");
         return pid;
       });
+      // 初始 IR 文档与起始页对齐(surfaceId 规则 frame_${page.id} → frame_page):
+      // 否则首次 workspace.get 懒创建的空文档 surfaces 为空,Agent ops 引用现有页面时 commit 校验会失败
+      ensureInitialRevision(projectId, {
+        revision: 0,
+        theme: { preset: input.preset, tokens: STARTER_SURFACE.theme.tokens },
+        surfaces: {
+          frame_page: {
+            id: "frame_page",
+            title: STARTER_SURFACE.page.title,
+            root: STARTER_SURFACE.root,
+            components: STARTER_SURFACE.components,
+          },
+        },
+        dataModels: {},
+        componentDefs: {},
+      });
+      // starter 画框行:frames 表与 IR 单一事实源对齐——否则 starter 项目 legacyPages 为空,
+      // 前端走 pages 表兜底路径(无 surfaceId),页面级选中的 scope.frameId 退化为数字 id,
+      // 后端 ContextBuilder 匹配不到,Refine/Repair 类 run 只能整页重建
+      const boardR = db
+        .insert(pageBoards)
+        .values({ projectId, title: STARTER_SURFACE.page.title, posX: 0, posY: 0 })
+        .run();
+      db
+        .insert(frames)
+        .values({
+          pageBoardId: Number(boardR.lastInsertRowid),
+          surfaceId: "frame_page",
+          title: STARTER_SURFACE.page.title,
+          device: STARTER_SURFACE.page.device,
+          width: 1440,
+          height: 900,
+          posX: 0,
+          posY: 0,
+        })
+        .run();
       return { id: projectId };
     }),
 
   get: authedQuery
     .input(z.object({ id: z.number() }))
     .query(async ({ ctx, input }) => {
-      const project = await requireProject(ctx.user.id, input.id);
+      // RBAC:viewer 及以上可读
+      const { project } = await requireProjectRole(ctx.user.id, input.id, "viewer");
       const db = getDb();
       const pPages = await db
         .select()
@@ -186,7 +231,7 @@ export const projectsRouter = createRouter({
       preset: z.enum(PRESET_IDS as [PresetId, ...PresetId[]]).optional(),
     }))
     .mutation(async ({ ctx, input }) => {
-      await requireProject(ctx.user.id, input.id);
+      await requireProject(ctx.user.id, input.id); // RBAC:editor 及以上可改名/预设
       const db = getDb();
       await db.update(projects)
         .set({
@@ -200,20 +245,86 @@ export const projectsRouter = createRouter({
   remove: authedQuery
     .input(z.object({ id: z.number() }))
     .mutation(async ({ ctx, input }) => {
-      await requireProject(ctx.user.id, input.id);
+      await requireProjectRole(ctx.user.id, input.id, "owner"); // RBAC:仅 owner 可删除项目
       const db = getDb();
+      // 删除前先取消进行中的 Run:否则 executeRun 管线仍在内存中运行,继续向 run_events
+      // 追加事件形成孤儿数据(runs 行已删,SSE/重放再也找不到该 Run)。
+      const activeRunIds = db
+        .select({ runId: runs.runId })
+        .from(runs)
+        .where(and(eq(runs.projectId, input.id), notInArray(runs.status, ["completed", "cancelled", "failed"])))
+        .all()
+        .map((r) => r.runId);
+      for (const runId of activeRunIds) {
+        RunManager.cancel(runId); // 内存 context 存在:中断 LLM 流并落 DB cancelled
+        // 内存无 context(服务重启遗留的 running 行):直接落终态,防止被恢复逻辑误复活
+        db.update(runs)
+          .set({ status: "cancelled" })
+          .where(and(eq(runs.runId, runId), notInArray(runs.status, ["completed", "cancelled", "failed"])))
+          .run();
+      }
+      if (activeRunIds.length) await new Promise((r) => setTimeout(r, 1200)); // 给取消收尾(事件/时长落库)留一拍
       const pPages = await db.select({ id: pages.id }).from(pages).where(eq(pages.projectId, input.id));
-      // 事务:消息 → 会话 → 版本 → 页面 → 部署记录 → 项目,任一步失败整体回滚
+      // 事务:全量清理。顺序遵循 FK 依赖(runs→conversations/conversations→messages 等):
+// 先删引用 runs 的全部子表 → runs → conversations/messages → 其余 projects 子表 → projects
       db.transaction((tx) => {
+        // Run 事实链:先取 runId,按依赖序删除(专家产物/事件流 → runs)
+        const runIdRows = tx.select({ runId: runs.runId }).from(runs).where(eq(runs.projectId, input.id)).all();
+        const runIds = runIdRows.length ? runIdRows.map((r) => r.runId) : ["__none__"];
+        tx.delete(runEvents).where(inArray(runEvents.runId, runIds)).run();
+        tx.delete(skillRuns).where(inArray(skillRuns.runId, runIds)).run();
+        tx.delete(uxReviewReports).where(inArray(uxReviewReports.runId, runIds)).run();
+        tx.delete(designBriefs).where(inArray(designBriefs.runId, runIds)).run();
+        tx.delete(designPlans).where(inArray(designPlans.runId, runIds)).run();
+        tx.delete(designDecisions).where(inArray(designDecisions.runId, runIds)).run();
+        tx.delete(clarificationRequests).where(inArray(clarificationRequests.runId, runIds)).run();
+        tx.delete(clarificationResponses).where(inArray(clarificationResponses.runId, runIds)).run();
+        tx.delete(styleDirections).where(inArray(styleDirections.runId, runIds)).run();
+        tx.delete(llmCalls).where(eq(llmCalls.projectId, input.id)).run();
+        tx.delete(designProposals).where(eq(designProposals.projectId, input.id)).run();
+        tx.delete(runs).where(eq(runs.projectId, input.id)).run();
+        // 会话链:messages → conversations(runs 已删,FK 安全)
         const convs = tx.select({ id: conversations.id }).from(conversations).where(eq(conversations.projectId, input.id)).all();
         for (const c of convs) tx.delete(messages).where(eq(messages.conversationId, c.id)).run();
+        // 自愈:跨项目 Run 污染(#15)——其他项目的 run 可能引用本项目会话(前端切项目时序漏洞),
+        // 不清理会永久阻塞 conversations 删除;连同其子表一并清除
+        const convIds = convs.map((c) => c.id);
+        if (convIds.length) {
+          const polluted = tx.select({ runId: runs.runId }).from(runs).where(inArray(runs.conversationId, convIds)).all().map((r) => r.runId);
+          if (polluted.length) {
+            tx.delete(runEvents).where(inArray(runEvents.runId, polluted)).run();
+            tx.delete(skillRuns).where(inArray(skillRuns.runId, polluted)).run();
+            tx.delete(uxReviewReports).where(inArray(uxReviewReports.runId, polluted)).run();
+            tx.delete(designBriefs).where(inArray(designBriefs.runId, polluted)).run();
+            tx.delete(designPlans).where(inArray(designPlans.runId, polluted)).run();
+            tx.delete(designDecisions).where(inArray(designDecisions.runId, polluted)).run();
+            tx.delete(designProposals).where(inArray(designProposals.runId, polluted)).run();
+            tx.delete(runs).where(inArray(runs.runId, polluted)).run();
+          }
+        }
         tx.delete(conversations).where(eq(conversations.projectId, input.id)).run();
+        // 其余业务表/Harness 事实源:frames → page_boards → revisions/op_batches
         tx.delete(versions).where(eq(versions.projectId, input.id)).run();
-        tx.delete(llmCalls).where(eq(llmCalls.projectId, input.id)).run();
         tx.delete(pages).where(eq(pages.projectId, input.id)).run();
         tx.delete(deploys).where(eq(deploys.projectId, input.id)).run();
+        const boardIds = tx.select({ id: pageBoards.id }).from(pageBoards).where(eq(pageBoards.projectId, input.id)).all().map((b) => b.id);
+        if (boardIds.length) tx.delete(frames).where(inArray(frames.pageBoardId, boardIds)).run();
+        tx.delete(pageBoards).where(eq(pageBoards.projectId, input.id)).run();
+        tx.delete(projectRevisions).where(eq(projectRevisions.projectId, input.id)).run();
+        tx.delete(opBatches).where(eq(opBatches.projectId, input.id)).run();
+        // 可观测性/导出登记/协作数据(comments 有 projects FK,任一残留即约束失败)
+        tx.delete(exportFiles).where(eq(exportFiles.projectId, input.id)).run();
+        tx.delete(snapshots).where(eq(snapshots.projectId, input.id)).run();
+        tx.delete(auditLogs).where(eq(auditLogs.projectId, input.id)).run();
+        tx.delete(outboxEvents).where(eq(outboxEvents.projectId, input.id)).run();
+        tx.delete(comments).where(eq(comments.projectId, input.id)).run();
+        tx.delete(alerts).where(eq(alerts.projectId, input.id)).run();
+        void designSkills; // 全局技能表,不随项目删除
+        tx.delete(projectMembers).where(eq(projectMembers.projectId, input.id)).run();
         tx.delete(projects).where(eq(projects.id, input.id)).run();
       });
+      // 兜底:清理取消收尾竞态产生的孤儿事件(cancel 后管线仍可能写入最后一两条,而 runs 行已删)
+      db.run(sql`DELETE FROM run_events WHERE runId NOT IN (SELECT runId FROM runs)`);
       // 部署产物目录:事务提交后尽力清理(文件系统不参与事务)
       await rm(path.resolve(process.cwd(), "data", "deploys", String(input.id)), { recursive: true, force: true }).catch(() => {});
       return { ok: true, removed: pPages.length };
@@ -316,7 +427,7 @@ export const versionsRouter = createRouter({
   list: authedQuery
     .input(z.object({ projectId: z.number() }))
     .query(async ({ ctx, input }) => {
-      await requireProject(ctx.user.id, input.projectId);
+      await requireProjectRole(ctx.user.id, input.projectId, "viewer"); // RBAC:viewer 可读版本列表
       return getDb().select({
         id: versions.id, label: versions.label, createdAt: versions.createdAt,
       }).from(versions).where(eq(versions.projectId, input.projectId)).orderBy(desc(versions.id));
@@ -326,7 +437,7 @@ export const versionsRouter = createRouter({
   get: authedQuery
     .input(z.object({ id: z.number(), projectId: z.number() }))
     .query(async ({ ctx, input }) => {
-      await requireProject(ctx.user.id, input.projectId);
+      await requireProjectRole(ctx.user.id, input.projectId, "viewer"); // RBAC:viewer 可读版本内容
       const rows = await getDb().select().from(versions)
         .where(and(eq(versions.id, input.id), eq(versions.projectId, input.projectId))).limit(1);
       if (!rows.length) throw new TRPCError({ code: "NOT_FOUND", message: "版本不存在" });
@@ -418,6 +529,8 @@ export const settingsRouter = createRouter({
         model: env.kimiModel,
         vision: "auto" as VisionSetting,
         supportsImages: resolveVision("auto", "kimi", env.kimiModel),
+        budgetMaxCostUsd: 0,
+        profileModels: {},
       };
     }
     const s = rows[0];
@@ -430,6 +543,12 @@ export const settingsRouter = createRouter({
     const effectiveKey = s.llmApiKey || envCfg.key;
     const model = useEnv ? envCfg.model : s.llmModel || envCfg.model;
     const vision = (s.llmVision ?? "auto") as VisionSetting;
+    let storedProfileModels: Record<string, string> = {};
+    try {
+      storedProfileModels = JSON.parse(s.profileModels ?? "{}") as Record<string, string>;
+    } catch {
+      /* 脏数据按未配置 */
+    }
     return {
       provider,
       apiKey: "",
@@ -439,6 +558,8 @@ export const settingsRouter = createRouter({
       model,
       vision,
       supportsImages: resolveVision(vision, provider, model),
+      budgetMaxCostUsd: s.budgetMaxCostUsd ?? 0,
+      profileModels: storedProfileModels,
     };
   }),
 
@@ -451,290 +572,57 @@ export const settingsRouter = createRouter({
       model: z.string().max(64),
       /** 图片对话能力开关;缺省保持原值 */
       vision: z.enum(["auto", "on", "off"]).optional(),
+      /** M6-2 预算:用户级累计成本上限(USD);0=走系统默认 */
+      budgetMaxCostUsd: z.number().min(0).max(100000).optional(),
+      /** M7 多模型路由:按阶段覆盖模型;空/缺省 = 用主模型 */
+      profileModels: z
+        .object({
+          planning: z.string().max(64).optional(),
+          generation: z.string().max(64).optional(),
+          review: z.string().max(64).optional(),
+        })
+        .optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       const db = getDb();
       const rows = await db.select().from(userSettings).where(eq(userSettings.userId, ctx.user.id)).limit(1);
       const nextKey = input.apiKey || rows[0]?.llmApiKey || null;
+      const nextProfileModels = input.profileModels
+        ? JSON.stringify({
+            ...(input.profileModels.planning ? { planning: input.profileModels.planning } : {}),
+            ...(input.profileModels.generation ? { generation: input.profileModels.generation } : {}),
+            ...(input.profileModels.review ? { review: input.profileModels.review } : {}),
+          })
+        : (rows[0]?.profileModels ?? "{}");
       if (!rows.length) {
         await db.insert(userSettings).values({
           userId: ctx.user.id, llmProvider: input.provider,
           llmApiKey: nextKey, llmBaseUrl: input.baseUrl, llmModel: input.model,
           llmVision: input.vision ?? "auto",
+          budgetMaxCostUsd: input.budgetMaxCostUsd ?? 0,
+          profileModels: nextProfileModels,
         });
       } else {
         await db.update(userSettings).set({
           llmProvider: input.provider, llmApiKey: nextKey,
           llmBaseUrl: input.baseUrl, llmModel: input.model,
           ...(input.vision ? { llmVision: input.vision } : {}),
+          ...(input.budgetMaxCostUsd != null ? { budgetMaxCostUsd: input.budgetMaxCostUsd } : {}),
+          profileModels: nextProfileModels,
         }).where(eq(userSettings.userId, ctx.user.id));
       }
       return { ok: true };
     }),
+
+  /** M6-2:用户级用量与预算(设置页展示) */
+  usage: authedQuery.query(async ({ ctx }) => usageSnapshot(ctx.user.id)),
 });
-
-// ---------------------------------------------------------------------------
-// 对话生成
-// ---------------------------------------------------------------------------
-const chipSchema = z.discriminatedUnion("kind", [
-  z.object({ kind: z.literal("page"), pageId: z.string(), title: z.string() }),
-  z.object({ kind: z.literal("element"), pageId: z.string(), aid: z.string(), label: z.string() }),
-]);
-
-async function buildPipelineInput(ctx: { user: { id: number } }, projectId: number, prompt: string, chips: PipelineInput["chips"], images?: ImageRef[]): Promise<{ input: PipelineInput; project: typeof projects.$inferSelect }> {
-  const project = await requireProject(ctx.user.id, projectId);
-  const db = getDb();
-  const pPages = await db.select().from(pages).where(eq(pages.projectId, project.id)).orderBy(pages.id);
-  const parsedPages = pPages.map((p) => ({ ...p, surface: parseSurface(p.surface) }));
-  const settingRows = await db.select().from(userSettings).where(eq(userSettings.userId, ctx.user.id)).limit(1);
-  const s = settingRows[0];
-  // 历史数据可能存了已下线的 anthropic,统一归一化为 kimi(OpenAI 兼容通道)
-  const provider = "kimi";
-  const envCfg = { key: env.kimiApiKey, baseUrl: env.kimiBaseUrl, model: env.kimiModel };
-  // 与 settings.get 同源策略:无个人 Key 时整套走 env,避免跨服务混用
-  const useEnv = !s?.llmApiKey;
-  const llm = {
-    provider,
-    apiKey: s?.llmApiKey || envCfg.key || null,
-    baseUrl: useEnv ? envCfg.baseUrl : s?.llmBaseUrl || envCfg.baseUrl,
-    model: useEnv ? envCfg.model : s?.llmModel || envCfg.model,
-    maxTokens: env.llmMaxTokens,
-  };
-  // 图片对话:按用户 vision 设置 + 模型能力解析;关闭时图片直接丢弃(消息也不留缩略图)
-  const vision = resolveVision((s?.llmVision ?? "auto") as VisionSetting, provider, llm.model);
-  return {
-    input: {
-      projectId: project.id,
-      prompt,
-      chips,
-      projectPreset: normalizePreset(project.preset),
-      pages: parsedPages,
-      llm,
-      vision,
-      images: vision && images?.length ? images : undefined,
-    },
-    project,
-  };
-}
-
-type PageRow = {
-  id: number; title: string; device: string;
-  posX: number; posY: number; width: number; height: number;
-  surface: SurfaceDoc;
-};
-
-/** 将 ChatAction 应用到数据库,返回落库后的页面(createPage 场景)。同步执行,可在事务内调用 */
-function applyActionsToDb(
-  db: Db,
-  projectId: number,
-  parsedPages: PageRow[],
-  actions: ChatAction[],
-) {
-  const appliedPages: (PageRow & { projectId: number; clientPageId?: string })[] = [];
-  // 多页同建时逐页右移,避免重叠(posX 在循环内累积)
-  let nextX = parsedPages.reduce((m, p) => Math.max(m, p.posX + p.width), 0);
-  for (const action of actions) {
-    if (action.type === "createPage") {
-      const dims = { desktop: [1440, 900], laptop: [1280, 800], tablet: [768, 1024], mobile: [390, 844] }[action.device];
-      const posX = nextX ? nextX + 160 : 0;
-      const r = db.insert(pages).values({
-        projectId,
-        title: action.title,
-        device: action.device,
-        surface: JSON.stringify(action.surface),
-        posX,
-        posY: 0,
-        width: dims[0],
-        height: dims[1],
-      }).run();
-      appliedPages.push({
-        id: Number(r.lastInsertRowid), projectId, title: action.title, device: action.device,
-        surface: action.surface, posX, posY: 0,
-        width: dims[0], height: dims[1],
-        // 回传 LLM 管线生成的临时 pageId,前端据此精确对应(不再靠标题匹配)
-        clientPageId: action.pageId,
-      });
-      nextX = posX + dims[0];
-    } else if (action.type === "updateSurface") {
-      const page = parsedPages.find((p) => String(p.id) === action.pageId);
-      if (page) {
-        db.update(pages).set({
-          surface: JSON.stringify(action.surface),
-          title: action.surface.page.title || page.title,
-          device: action.surface.page.device,
-        }).where(eq(pages.id, page.id)).run();
-      }
-    } else if (action.type === "ops") {
-      const page = parsedPages.find((p) => String(p.id) === action.pageId);
-      if (page) {
-        const next = applyOps(page.surface, action.ops);
-        db.update(pages).set({
-          surface: JSON.stringify(next),
-          title: next.page.title || page.title,
-        }).where(eq(pages.id, page.id)).run();
-      }
-    } else if (action.type === "setPreset") {
-      db.update(projects).set({ preset: action.preset }).where(eq(projects.id, projectId)).run();
-    }
-  }
-  return appliedPages;
-}
-
-/** 持久化一轮对话消息(同步,可在事务内调用);conversationId 缺省时用最近会话或新建,返回实际使用的会话 id */
-function persistChat(
-  db: Db,
-  projectId: number,
-  prompt: string,
-  chips: unknown,
-  result: { assistantText: string; engine: string; model?: string; actions: { type: string }[]; steps: unknown },
-  conversationId?: number | null,
-  /** 用户消息附带的图片缩略 dataUrl(仅回显用,不回放给模型) */
-  images?: string[],
-): number {
-  let convId: number | undefined;
-  if (conversationId) {
-    const owned = db.select({ id: conversations.id }).from(conversations)
-      .where(and(eq(conversations.id, conversationId), eq(conversations.projectId, projectId))).limit(1).all();
-    convId = owned[0]?.id;
-  }
-  if (!convId) {
-    const convs = db.select().from(conversations).where(eq(conversations.projectId, projectId)).orderBy(desc(conversations.id)).limit(1).all();
-    convId = convs[0]?.id;
-  }
-  if (!convId) {
-    const c = db.insert(conversations).values({ projectId, title: prompt.slice(0, 30) }).run();
-    convId = Number(c.lastInsertRowid);
-  }
-  db.insert(messages).values([
-    { conversationId: convId, role: "user", content: prompt, meta: JSON.stringify({ chips, ...(images?.length ? { images } : {}) }) },
-    { conversationId: convId, role: "assistant", content: result.assistantText, meta: JSON.stringify({ engine: result.engine, model: result.model, actions: result.actions.map((a) => a.type), steps: result.steps }) },
-  ]).run();
-  return convId;
-}
-
-/**
- * 加载本轮生成之前的最近对话(与 persistChat 相同的会话解析规则:指定会话须归属本项目,否则用最近会话)。
- * 注入 LLM 上下文供模型理解多轮指代(「改回去」「再换一个」);当前轮消息尚未落库,故取到的均为历史轮。
- */
-function loadRecentHistory(projectId: number, conversationId: number | null | undefined, limit = 6): ChatTurn[] {
-  const db = getDb();
-  let convId: number | undefined;
-  if (conversationId) {
-    const owned = db.select({ id: conversations.id }).from(conversations)
-      .where(and(eq(conversations.id, conversationId), eq(conversations.projectId, projectId))).limit(1).all();
-    convId = owned[0]?.id;
-  }
-  if (!convId) {
-    const convs = db.select({ id: conversations.id }).from(conversations)
-      .where(eq(conversations.projectId, projectId)).orderBy(desc(conversations.id)).limit(1).all();
-    convId = convs[0]?.id;
-  }
-  if (!convId) return [];
-  const rows = db.select({ role: messages.role, content: messages.content }).from(messages)
-    .where(eq(messages.conversationId, convId)).orderBy(desc(messages.id)).limit(limit).all();
-  return rows.reverse().map((m) => ({ role: m.role === "user" ? "user" : "assistant", content: m.content }));
-}
-
-export interface ChatGenerateParams {
-  projectId: number;
-  prompt: string;
-  chips: PipelineInput["chips"];
-  /** 续接的会话 id(null/缺省 = 复用最近会话或自动新建) */
-  conversationId?: number | null;
-  /** 客户端断开时联动中止 LLM 调用(释放互斥锁、及时止损) */
-  signal?: AbortSignal;
-  /** 随 prompt 附带的参考图片(仅 vision 开启时生效;最多 3 张) */
-  images?: ImageRef[];
-  /** 图片缩略 dataUrl,仅用于消息持久化回显 */
-  imageThumbs?: string[];
-}
-
-export interface ChatGenerateOutput {
-  result: ChatGenerateResult;
-  plan?: ReturnType<typeof planFromActions>;
-  appliedPages: (PageRow & { projectId: number; clientPageId?: string })[];
-  /** 本轮消息实际写入的会话 id(plan 分支未落库时为入参原值或 null) */
-  conversationId: number | null;
-}
-
-/** 项目级生成互斥:同一项目同一时刻只允许一轮生成(防双击发送 / 多标签页并发导致落库错乱) */
-const generatingProjects = new Set<number>();
-
-/** 对话生成主流程入口(带项目级互斥锁) */
-export async function executeChatGenerate(
-  userId: number,
-  params: ChatGenerateParams,
-  onStep?: (s: ChatStep) => void,
-  onDraft?: (d: DraftChunk) => void,
-): Promise<ChatGenerateOutput> {
-  if (generatingProjects.has(params.projectId)) {
-    throw new Error("当前项目有正在进行的生成任务,请等待完成后再试");
-  }
-  generatingProjects.add(params.projectId);
-  try {
-    return await executeChatGenerateInner(userId, params, onStep, onDraft);
-  } finally {
-    generatingProjects.delete(params.projectId);
-  }
-}
-
-/** 对话生成主流程(tRPC generate 与 SSE 流式端点共用);onStep 实时推送执行步骤,onDraft 推送 LLM 增量文本 */
-async function executeChatGenerateInner(
-  userId: number,
-  params: ChatGenerateParams,
-  onStep?: (s: ChatStep) => void,
-  onDraft?: (d: DraftChunk) => void,
-): Promise<ChatGenerateOutput> {
-  const { input: pipelineInput, project } = await buildPipelineInput({ user: { id: userId } }, params.projectId, params.prompt, params.chips, params.images);
-  // 客户端中断信号传给 LLM 层(fetch abort)
-  pipelineInput.signal = params.signal;
-  // 多轮对话历史(当前轮未落库,取到的均为历史轮);plan 模式不落库也无妨——读的是既有历史
-  pipelineInput.history = loadRecentHistory(params.projectId, params.conversationId);
-  const parsedPages = pipelineInput.pages;
-  const result = await runPipeline(pipelineInput, onStep, onDraft);
-
-  // 执行策略由模型产出自动判断(无手动 Auto/Build/Plan 切换):
-  // 计划中含高风险操作(删除/移动组件、整页重生成)→ 转审批,用户确认后执行;低风险变更直接落库
-  if (result.actions.length) {
-    const plan = planFromActions(result.actions);
-    if (plan.risk === "medium") {
-      const waitStep: ChatStep = {
-        key: "apply",
-        label: "等待计划审批",
-        status: "done",
-        detail: plan.summary,
-      };
-      result.steps.push(waitStep);
-      onStep?.(waitStep);
-      return { result, plan, appliedPages: [], conversationId: params.conversationId ?? null };
-    }
-  }
-
-  // 事务:消息持久化 + 动作落库 + 自动快照,任一步失败整体回滚(不留半截状态)
-  const db = getDb();
-  const t0 = Date.now();
-  const snapLabel = `AI:${params.prompt.slice(0, 24)}`;
-  const { convId, appliedPages } = db.transaction((tx) => {
-    const t = tx as unknown as Db;
-    // 图片未实际送入管线(vision 关闭被丢弃)时不留缩略图,避免历史里出现"发了图但模型没看到"的假象
-    const thumbs = pipelineInput.images?.length ? params.imageThumbs : undefined;
-    const cid = persistChat(t, project.id, params.prompt, params.chips, result, params.conversationId, thumbs);
-    const applied = applyActionsToDb(t, project.id, parsedPages, result.actions);
-    snapshotVersion(t, project.id, snapLabel);
-    return { convId: cid, appliedPages: applied };
-  });
-  const snapStep: ChatStep = { key: "snapshot", label: "保存快照", status: "done", detail: snapLabel, durationMs: Date.now() - t0 };
-  result.steps.push(snapStep);
-  onStep?.(snapStep);
-
-  return { result, appliedPages, conversationId: convId };
-}
 
 export const chatRouter = createRouter({
   history: authedQuery
     .input(z.object({ projectId: z.number(), conversationId: z.number().nullish() }))
     .query(async ({ ctx, input }) => {
-      await requireProject(ctx.user.id, input.projectId);
+      await requireProjectRole(ctx.user.id, input.projectId, "viewer"); // RBAC:viewer 可读历史
       const db = getDb();
       let convId: number | undefined;
       if (input.conversationId) {
@@ -757,7 +645,7 @@ export const chatRouter = createRouter({
   conversations: authedQuery
     .input(z.object({ projectId: z.number() }))
     .query(async ({ ctx, input }) => {
-      await requireProject(ctx.user.id, input.projectId);
+      await requireProjectRole(ctx.user.id, input.projectId, "viewer"); // RBAC:viewer 可读会话列表
       const db = getDb();
       const convs = await db.select({ id: conversations.id, title: conversations.title, createdAt: conversations.createdAt })
         .from(conversations).where(eq(conversations.projectId, input.projectId)).orderBy(desc(conversations.id));
@@ -809,77 +697,7 @@ export const chatRouter = createRouter({
       return { ok: true, removed: convs.length };
     }),
 
-  analyze: authedQuery
-    .input(z.object({
-      projectId: z.number(),
-      prompt: z.string().min(1).max(4000),
-      chips: z.array(chipSchema).default([]),
-    }))
-    .mutation(async ({ ctx, input }) => {
-      const { input: pipelineInput } = await buildPipelineInput(ctx, input.projectId, input.prompt, input.chips);
-      return runAnalyze(pipelineInput);
-    }),
 
-  generate: authedQuery
-    .input(z.object({
-      projectId: z.number(),
-      prompt: z.string().min(1).max(4000),
-      chips: z.array(chipSchema).default([]),
-      conversationId: z.number().nullish(),
-      images: z.array(imageRefSchema).max(3).optional(),
-      imageThumbs: z.array(z.string().max(300_000)).max(3).optional(),
-    }))
-    .mutation(async ({ ctx, input }) => {
-      const out = await executeChatGenerate(ctx.user.id, { ...input, signal: ctx.req.signal });
-      if (out.plan) return { ...out.result, plan: out.plan, appliedPages: [], conversationId: out.conversationId };
-      return { ...out.result, appliedPages: out.appliedPages, conversationId: out.conversationId };
-    }),
-
-  /** Plan 模式:用户批准后执行已审阅的 actions */
-  applyPlan: authedQuery
-    .input(z.object({
-      projectId: z.number(),
-      prompt: z.string().min(1).max(4000),
-      chips: z.array(chipSchema).default([]),
-      actions: z.array(chatActionSchema).min(1),
-      engine: z.string().default("kimi"),
-      assistantText: z.string().max(8000).default(""),
-      conversationId: z.number().nullish(),
-      steps: z.array(z.object({
-        key: z.string(), label: z.string(),
-        status: z.enum(["running", "done", "error"]),
-        detail: z.string().optional(), durationMs: z.number().optional(),
-      })).default([]),
-    }))
-    .mutation(async ({ ctx, input }) => {
-      const project = await requireProject(ctx.user.id, input.projectId);
-      const db = getDb();
-      const pPages = await db.select().from(pages).where(eq(pages.projectId, project.id)).orderBy(pages.id);
-      const parsedPages = pPages.map((p) => ({ ...p, surface: parseSurface(p.surface) }));
-
-      const snapLabel = `AI:${input.prompt.slice(0, 24)}`;
-      const t0 = Date.now();
-      const steps = [
-        ...input.steps,
-        { key: "apply", label: "执行已批准计划", status: "done" as const, detail: `${input.actions.length} 个动作`, durationMs: 0 },
-        { key: "snapshot", label: "保存快照", status: "done" as const, detail: snapLabel, durationMs: 0 },
-      ];
-
-      // 事务:动作落库 + 自动快照 + 消息持久化,任一步失败整体回滚
-      const { convId, appliedPages, txMs } = db.transaction((tx) => {
-        const t = tx as unknown as Db;
-        const applied = applyActionsToDb(t, project.id, parsedPages, input.actions as ChatAction[]);
-        snapshotVersion(t, project.id, snapLabel);
-        const cid = persistChat(t, project.id, input.prompt, input.chips, {
-          assistantText: input.assistantText, engine: input.engine,
-          actions: input.actions, steps,
-        }, input.conversationId);
-        return { convId: cid, appliedPages: applied, txMs: Date.now() - t0 };
-      });
-      steps[steps.length - 1].durationMs = txMs;
-
-      return { appliedPages, steps, conversationId: convId };
-    }),
 });
 
 // ---------------------------------------------------------------------------
@@ -890,7 +708,7 @@ export const statsRouter = createRouter({
   overview: authedQuery
     .input(z.object({ projectId: z.number() }))
     .query(async ({ ctx, input }) => {
-      await requireProject(ctx.user.id, input.projectId);
+      await requireProjectRole(ctx.user.id, input.projectId, "viewer"); // RBAC:viewer 可读用量统计
       const db = getDb();
       const recent = await db
         .select({

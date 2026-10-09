@@ -13,6 +13,11 @@ import { applyOps, DEVICES } from "@contracts/a2ui";
 export interface PageState {
   id: number;
   projectId: number;
+  /** Design IR 中的 surface id(新模型;旧 pages 数据缺省) */
+  surfaceId?: string;
+  /** 所属 PageBoard(画布分组底板用) */
+  boardId?: number;
+  boardTitle?: string;
   title: string;
   device: DeviceId;
   surface: SurfaceDoc;
@@ -78,6 +83,8 @@ interface WorkspaceState {
   conversationId: number | null;
   /** 流式生成草稿(渐进渲染预览,不落库) */
   draft: StreamDraft | null;
+  /** M7 逐节点持久 Diff 着色:surfaceId → 最近一次提交的增/改/删组件(画布 outline 标色) */
+  nodeDiffs: Record<string, import("@/lib/a2ui-ipc").NodeDiff>;
   /** 图层树/检查器点击组件后,请求对应 iframe 闪烁高亮一次(seq 保证重复点击同一组件也触发) */
   highlightReq: { pageId: number; aid: string | null; seq: number } | null;
 
@@ -130,6 +137,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
   messages: [],
   conversationId: null,
   draft: null,
+  nodeDiffs: {},
   highlightReq: null,
   past: [],
   future: [],
@@ -146,6 +154,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
       future: [],
       messages: [],
       conversationId: null,
+      nodeDiffs: {},
     }),
 
   setZoom: (zoom) => set({ zoom }),

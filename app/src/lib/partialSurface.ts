@@ -214,3 +214,71 @@ function balancedEndString(text: string, openQuote: number): number {
   }
   return -1;
 }
+
+/**
+ * ops 流式草稿解析(edit/局部修改路径):{"ops":[{...},{...}]} 逐 token 到达时,
+ * 逐元素做括号配平,只返回已完整闭合且可 JSON.parse 的原始 op 对象(宽松,不过 schema ——
+ * 仅供预览;提交前的最终校验仍由 kimiGenerateOps 的 zod + applyOps 二次验证负责)
+ */
+export function parsePartialOps(raw: string): Record<string, unknown>[] {
+  const cleaned = raw.replace(/```json|```/g, "");
+  const brace = cleaned.indexOf("{");
+  if (brace < 0) return [];
+  const text = cleaned.slice(brace);
+  const arrStart = valueStart(text, "ops");
+  if (arrStart < 0 || text[arrStart] !== "[") return [];
+  const ops: Record<string, unknown>[] = [];
+  let i = arrStart + 1;
+  while (i < text.length) {
+    while (i < text.length && /[\s,]/.test(text[i])) i++;
+    if (i >= text.length || text[i] === "]") break;
+    if (text[i] !== "{") break; // 结构异常,停止
+    const end = balancedEnd(text, i);
+    if (end < 0) break; // 最后一个元素未闭合
+    try {
+      const parsed = JSON.parse(text.slice(i, end)) as unknown;
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        ops.push(parsed as Record<string, unknown>);
+      }
+    } catch { /* 半行 JSON */ }
+    i = end;
+  }
+  return ops;
+}
+
+/**
+ * 流式预览增量合并(前端):把后端 delta 帧(upserts = 新增/变化的组件)合并进
+ * 累积文档。注意:不在此过滤悬空 children —— 流式期间引用可能先于目标组件到达,
+ * 提前过滤会永久丢失引用;渲染端对缺失节点已容错(返回 null),后续帧到达后引用自然生效。
+ * meta 提供 root/标题/设备/主题,缺省沿用 base。
+ */
+export function mergePreviewDelta(
+  base: SurfaceDoc | null,
+  upserts: Record<string, Record<string, unknown>> | undefined,
+  meta: { root?: string; title?: string; device?: string; theme?: SurfaceDoc["theme"] } | undefined,
+): SurfaceDoc {
+  const components: Record<string, SurfaceDoc["components"][string]> = { ...(base?.components ?? {}) };
+  for (const [aid, node] of Object.entries(upserts ?? {})) {
+    if (node && typeof node === "object") {
+      components[aid] = {
+        type: String((node as { type?: unknown }).type ?? "Col"),
+        props: ((node as { props?: Record<string, unknown> }).props ?? {}) as Record<string, unknown>,
+        children: Array.isArray((node as { children?: unknown }).children)
+          ? ((node as { children: string[] }).children).filter((c) => typeof c === "string")
+          : [],
+      };
+    }
+  }
+  const root = meta?.root && components[meta.root] ? meta.root : base?.root ?? Object.keys(components)[0] ?? "root";
+  return {
+    version: "1.0",
+    page: {
+      id: base?.page.id ?? root,
+      title: meta?.title ?? base?.page.title ?? "生成中…",
+      device: (meta?.device as DeviceId) ?? base?.page.device ?? "desktop",
+    },
+    theme: meta?.theme ?? base?.theme ?? { preset: "shadcn", tokens: DEFAULT_TOKENS },
+    components,
+    root,
+  };
+}

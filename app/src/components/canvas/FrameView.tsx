@@ -3,13 +3,20 @@
  * header(标题/设备/操作) + iframe(渲染器) + 交互 overlay
  */
 import { memo, useEffect, useRef, useState } from "react";
-import { Monitor, Smartphone, Tablet, Laptop, Crosshair, Copy, Trash2 } from "lucide-react";
+import {
+  Monitor, Smartphone, Tablet, Laptop, Crosshair, Copy, Trash2, MoreHorizontal,
+  Pencil, MessageCircleQuestion, SearchCheck, Camera, Download,
+} from "lucide-react";
+import { toast } from "sonner";
 import type { PageState } from "@/stores/workspaceStore";
 import { useWorkspace } from "@/stores/workspaceStore";
 import { IPC_SOURCE, postToIframe, type RendererMessage } from "@/lib/a2ui-ipc";
 import { usePageOps } from "@/hooks/usePageOps";
 import { trpc } from "@/providers/trpc";
 import { DEVICES, type DeviceId } from "@contracts/a2ui";
+import {
+  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuLabel,
+} from "@/components/ui/dropdown-menu";
 
 /** 内联文本编辑会话:双击 iframe 内文本类组件后由宿主在组件上方弹出编辑器 */
 interface TextEditState {
@@ -21,7 +28,21 @@ interface TextEditState {
 
 const DEVICE_ICON = { desktop: Monitor, laptop: Laptop, tablet: Tablet, mobile: Smartphone } as const;
 
-export const FrameView = memo(function FrameView({ page, onFocus, ghost }: { page: PageState; onFocus?: () => void; ghost?: boolean }) {
+export const FrameView = memo(function FrameView({
+  page,
+  onFocus,
+  ghost,
+  mapMode,
+  lazy,
+}: {
+  page: PageState;
+  onFocus?: () => void;
+  ghost?: boolean;
+  /** 页面地图模式(zoom<35%):不渲染 iframe,只显示轮廓+标题 */
+  mapMode?: boolean;
+  /** 视口虚拟化:画布外画框不挂载 iframe,仅保留占位 */
+  lazy?: boolean;
+}) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const readyRef = useRef(false);
   // 上次下发的 surface 引用:surface 全程不可变更新,引用相同即内容相同,
@@ -42,6 +63,7 @@ export const FrameView = memo(function FrameView({ page, onFocus, ghost }: { pag
   const showShimmer = !ghost && !!draftState && !draftSurface;
   const inspectMode = useWorkspace((s) => s.inspectMode);
   const setInspectMode = useWorkspace((s) => s.setInspectMode);
+    const requestHighlight = useWorkspace((s) => s.requestHighlight);
   const setSelectedPages = useWorkspace((s) => s.setSelectedPages);
   const setSelectedElements = useWorkspace((s) => s.setSelectedElements);
   const removePage = useWorkspace((s) => s.removePage);
@@ -78,6 +100,47 @@ export const FrameView = memo(function FrameView({ page, onFocus, ghost }: { pag
   // 手动编辑与 AI 编辑共用同一条 op 链路(快照 → applyOps → 持久化)
   const applyPageOps = usePageOps();
 
+  // §6.3 页面菜单:重命名 / 生成移动端·平板版本 / 对该页面提问 / 运行 UX 评审 / 创建快照 / 导出该页面
+  const sendPrompt = (window as unknown as {
+    __sendPrompt?: (prompt: string, opts?: { mode?: string; autoSend?: boolean; pageId?: string; pageTitle?: string }) => void;
+  }).__sendPrompt;
+  const renameMut = trpc.pages.update.useMutation({
+    onSuccess: () => toast.success("页面已重命名"),
+    onError: () => toast.error("重命名持久化失败,刷新后将回退"),
+  });
+  const renamePage = (raw: string) => {
+    const t = raw.trim().slice(0, 100);
+    if (!t || t === page.title) return;
+    snapshotForUndo();
+    updatePageLocal(page.id, { title: t });
+    renameMut.mutate({ id: page.id, projectId: page.projectId, title: t });
+  };
+  const snapshotMut = trpc.versions.save.useMutation({
+    onSuccess: () => toast.success("已创建快照(可在顶栏「版本」查看)"),
+    onError: () => toast.error("快照创建失败"),
+  });
+  const workspaceRevQ = trpc.workspace.get.useQuery({ projectId: page.projectId });
+  const exportPageMut = trpc.exports.create.useMutation({
+    onSuccess: (r) => {
+      toast.success(`单页导出成功(${r.fileCount} 个文件),已开始下载`);
+      window.open(`/api/exports/${r.exportId}/download`, "_blank");
+    },
+    onError: (e) => toast.error(`导出失败:${e.message.slice(0, 140)}`),
+  });
+  const exportPage = () => {
+    if (!page.surfaceId) { toast.error("该页面没有 Design IR 数据,无法导出"); return; }
+    exportPageMut.mutate({
+      projectId: page.projectId,
+      baseRevision: workspaceRevQ.data?.revision ?? 0,
+      projectName: page.title || "A2UI 页面",
+      adapterId: "shadcn-tailwind",
+      surfaceIds: [page.surfaceId],
+    });
+  };
+  /** 发起 Agent 任务(页面级上下文:菜单点击不触发画框选中,桥内自带 chips) */
+  const askAgent = (prompt: string, opts?: { mode?: string; autoSend?: boolean }) =>
+    sendPrompt?.(prompt, { ...opts, pageId: String(page.id), pageTitle: page.title });
+
   const sendSurface = () => {
     if (!readyRef.current || !iframeRef.current?.contentWindow) return;
     const last = lastSentRef.current;
@@ -112,6 +175,13 @@ export const FrameView = memo(function FrameView({ page, onFocus, ghost }: { pag
       } else if (msg.type === "textEdit") {
         // 双击文本组件:弹出内联编辑器(浮层定位在组件上方)
         setTextEdit({ aid: msg.aid, prop: msg.prop, value: msg.value, rect: msg.rect });
+      } else if (msg.type === "commentClick") {
+        // M7 评论气泡点击:选中锚点组件并打开检查器(评论流随之可见)
+        setSelectedPages([page.id]);
+        const nodeType = page.surface.components[msg.nodeId]?.type ?? "Col";
+        setSelectedElements([{ pageId: page.id, aid: msg.nodeId, componentType: nodeType }]);
+        setInspectMode(true);
+        requestHighlight(page.id, msg.nodeId);
       }
     };
     window.addEventListener("message", onMessage);
@@ -121,6 +191,28 @@ export const FrameView = memo(function FrameView({ page, onFocus, ghost }: { pag
 
   useEffect(sendSurface);
   useEffect(sendInspect, [inspectMode, selected]);
+
+  // M7 逐节点持久 Diff 着色:该页面最近一次提交的增/改/删组件(outline 标色,直到下次提交覆盖)
+  const nodeDiff = useWorkspace((s) => (page.surfaceId ? s.nodeDiffs[page.surfaceId] : undefined));
+  const sendDiff = () => {
+    if (!readyRef.current || !iframeRef.current?.contentWindow) return;
+    postToIframe(iframeRef.current.contentWindow, { source: IPC_SOURCE, type: "setDiff", diff: nodeDiff ?? null });
+  };
+  useEffect(sendDiff, [nodeDiff]);
+
+  // M7 评论锚点气泡:把该页未解决评论下发给渲染器(按 nodeId 定位)
+  const commentsQ = trpc.comments.list.useQuery(
+    { projectId: page.projectId, surfaceId: page.surfaceId ?? "" },
+    { enabled: !!page.surfaceId },
+  );
+  const sendComments = () => {
+    if (!readyRef.current || !iframeRef.current?.contentWindow) return;
+    const list = (commentsQ.data ?? [])
+      .filter((c) => !c.resolved && c.nodeId)
+      .map((c) => ({ id: c.id, nodeId: c.nodeId!, body: c.body, authorName: c.authorName, resolved: c.resolved }));
+    postToIframe(iframeRef.current.contentWindow, { source: IPC_SOURCE, type: "setComments", comments: list });
+  };
+  useEffect(sendComments, [commentsQ.data]);
 
   // 图层树/检查器请求高亮本页组件(闪烁一次)
   const highlightReq = useWorkspace((s) => s.highlightReq);
@@ -168,7 +260,14 @@ export const FrameView = memo(function FrameView({ page, onFocus, ghost }: { pag
       className={`${ghost ? "a2-ghost" : "a2-frame group"} absolute select-none`}
       data-page-id={page.id}
       style={{ left: page.posX, top: page.posY, width: page.width, height: page.height + 34 }}
-      onMouseDown={(e) => { if (!ghost) downPosRef.current = { x: e.clientX, y: e.clientY }; }}
+      onMouseDown={(e) => {
+        if (ghost) return;
+        downPosRef.current = { x: e.clientX, y: e.clientY };
+        // down 即选中(非 Shift):平移/框选/缩放后的 gesto click 抑制会吞掉随后的 click 事件,
+        // 依赖 onClick 选中会导致平移后首次点选无响应(实测缺陷);Figma 同类工具均为 down 选中,
+        // click 的 shift 切换多选分支保留不变
+        if (!e.shiftKey) setSelectedPages([page.id]);
+      }}
       onClick={(e) => {
         if (ghost) return; // 幻影画框不参与选中/拖拽
         // 单击选中(Shift 切换多选);拖拽后的抬起不算点击
@@ -214,6 +313,53 @@ export const FrameView = memo(function FrameView({ page, onFocus, ghost }: { pag
               onClick={(e) => { e.stopPropagation(); removeMut.mutate({ id: page.id, projectId: page.projectId }); }}>
               <Trash2 size={12} />
             </button>
+            <span className="mx-0.5 h-4 w-px bg-neutral-200" />
+            {/* §6.3 页面菜单 */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button title="页面菜单" className="rounded p-1 text-neutral-400 transition hover:bg-neutral-100 hover:text-neutral-600"
+                  onClick={(e) => e.stopPropagation()}>
+                  <MoreHorizontal size={12} />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48" onClick={(e) => e.stopPropagation()}>
+                <DropdownMenuLabel className="text-[10px] text-neutral-400">页面操作</DropdownMenuLabel>
+                <DropdownMenuItem onClick={() => {
+                  const name = window.prompt("重命名页面", page.title);
+                  if (name != null) renamePage(name);
+                }}>
+                  <Pencil size={13} /> 重命名页面
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() =>
+                  askAgent(`为页面「${page.title}」生成移动端版本:保持信息架构与核心内容一致,按移动端优先重排布局(单列结构、底部主操作、大触控目标)。`, { mode: "create_frame", autoSend: true })
+                }>
+                  <Smartphone size={13} /> 生成移动端版本
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() =>
+                  askAgent(`为页面「${page.title}」生成平板版本:保持信息架构一致,适配中等屏幕宽度的两栏/网格布局。`, { mode: "create_frame", autoSend: true })
+                }>
+                  <Tablet size={13} /> 生成平板版本
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => askAgent(`关于页面「${page.title}」:`, { autoSend: false })}>
+                  <MessageCircleQuestion size={13} /> 对该页面提问
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() =>
+                  askAgent(`请对页面「${page.title}」运行完整 UX 评审:信息架构、视觉层级、交互完整性、可访问性,输出问题清单与修复建议。`, { mode: "review_only", autoSend: true })
+                }>
+                  <SearchCheck size={13} /> 运行 UX 评审
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() =>
+                  snapshotMut.mutate({ projectId: page.projectId, label: `快照 · ${page.title} · ${new Date().toLocaleString("zh-CN", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}` })
+                } disabled={snapshotMut.isPending}>
+                  <Camera size={13} /> 创建快照
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={exportPage} disabled={exportPageMut.isPending}>
+                  <Download size={13} /> {exportPageMut.isPending ? "导出中…" : "导出该页面"}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       )}
@@ -278,7 +424,17 @@ export const FrameView = memo(function FrameView({ page, onFocus, ghost }: { pag
             }}
           />
         )}
-        {showSkeleton ? (
+        {mapMode && !ghost ? (
+          /* 页面地图:低缩放下只显示轮廓与标题(文档 §7.1) */
+          <div className="flex h-full w-full items-center justify-center bg-neutral-100">
+            <span className="max-w-[90%] truncate text-sm font-medium text-neutral-400">{page.title}</span>
+          </div>
+        ) : lazy && !ghost && !draftState ? (
+          /* 视口虚拟化:画布外只保留占位框 */
+          <div className="flex h-full w-full items-center justify-center bg-neutral-50">
+            <span className="text-xs text-neutral-300">{page.title}</span>
+          </div>
+        ) : showSkeleton ? (
           <PageSkeleton />
         ) : (
           <iframe
@@ -294,6 +450,10 @@ export const FrameView = memo(function FrameView({ page, onFocus, ghost }: { pag
         {/* edit 模式等首个组件闭合:微光遮罩,保留原有内容可见 */}
         {showShimmer && (
           <div className="pointer-events-none absolute inset-0 z-10 animate-pulse bg-indigo-50/50" />
+        )}
+        {/* 幻影画框流式生成中:内容渐进到达时的微光遮罩(增强"正在生成"感知) */}
+        {ghost && !showSkeleton && (
+          <div className="pointer-events-none absolute inset-0 z-10 animate-pulse bg-indigo-100/25" />
         )}
         {/* 画布交互 overlay:inspect 时放行点击给 iframe */}
         {!inspectActive && !ghost && (

@@ -1,0 +1,73 @@
+{
+  "title": "全功能浏览器自动化测试与修复 · 最终归档报告",
+  "generatedAt": "2026-09-06T15:00:00+08:00",
+  "base": "http://localhost:3002",
+  "environment": {
+    "devServer": "npm run dev @ :3002",
+    "browser": "puppeteer-core + Chrome 1680x1050",
+    "llm": "kimi 网关(用户配置)"
+  },
+
+  "staticRegression": {
+    "tsc": "0 errors",
+    "eslint": "0 issues",
+    "vitest": "178 passed + 1 skipped (25 files)",
+    "buildGate": "tsc + vite build 全通过(npm run e2e 完整门禁)"
+  },
+
+  "e2eNoLlm": {
+    "passed": 29, "failed": 2,
+    "skipped": ["S1", "S2", "S4", "S8 断线重连事件重放(依赖 S1 runId)"],
+    "failedItems": [
+      { "id": "S3-3 SE 手柄缩放", "detail": "width=1440px 未变", "verdict": "外部多页重构后 Moveable/Gesto 集成层回归;onResize 回调在位,拖拽未触发 resize start,建议单独排查 react-moveable target 绑定时序" },
+      { "id": "S3-7 平移后点选", "detail": "click 到达 frame(捕获实证)但 React 未选中", "verdict": "平移 drag 后 gesto click 抑制吞掉 React 合成事件;InfiniteViewer preventClick* 选项实测无效,属 react-infinite-viewer/selecto 库集成层问题,建议后续以 document 级 mousedown 选中或升级库版本排查" }
+    ],
+    "fixedDuringRound": [
+      { "id": "S3-1/2/3/7 全错位", "rootCause": "#12 修复后 starter 项目自带 frame_page,seedIR 的 frame_login 与其重叠 @0,0,geom 读 DOM 第一个而交互作用在上层 frame_login", "fix": "geom 锚定「登录」frame + 场景前 blur+按「1」适应全部(CanvasStage onKey 的 TEXTAREA 守卫会吞键,探针实证)" }
+    ]
+  },
+
+  "e2eBasic": { "result": "全通过", "includes": "构建门禁(tsc+vite build)/exports.build/zip 下载/越权防护/projects.remove 清理" },
+
+  "llmRounds": {
+    "note": "LLM 场景结果受端点速度与输出随机性影响,链路验证与模型质量分离判定",
+    "round15": { "scenes": "S1,S4", "summary": "25/6;S1[2] commit+explanation+completed 全绿(events=254);S4[1] 编辑提交(design.ops_committed)+replaceProps 落库(updated=1)首次 e2e 全绿;S1[1] commit 960s 超时(两段式+评审修复循环 19min 未收敛,实证窗口不足)" },
+    "round16": { "scenes": "S1,S9,S4", "summary": "21/8;S1[1] 一次过提交(1200s 窗口+双通道生效,events=382);S9 多页增量预览 sids=preview_0,preview_1,preview_2 全唯一+ghost=2 并排(多页重构实证);S4 两 attempt 被 #13 保护正确拦截(refine+空 scope 显式报错,不再静默整页重建),点选几何问题暴露" },
+    "round17": { "scenes": "S1,S9,S4", "summary": "23/3 历史最佳;S1[1] 连续第三次 attempt1 一次过提交(events=287);S9 preview 三页唯一+ghost 并排连续两轮复现(commit 1800s 仍超时,三页评审修复循环>30min,LLM 速度限制);S4[1] 点选成功(「1」适应全部修复生效)→commit→replaceProps 落库全绿" }
+  },
+
+  "scriptHardening": [
+    "S1: commit 等待改双通道(SSE + runs.events 重放轮询 10s)+窗口 1200s",
+    "S1: streamText 等待期间轮询自动应答澄清卡(ask_user 挂起兜底)",
+    "S4: 点选前 blur+按「1」适应全部(视口保存位置/TEXTAREA 焦点吞键双坑)",
+    "S4: 点选校验 some() 遍历所有 frame(多 frame 重叠时旧校验只查第一个曾致误报)",
+    "S4: 预览等待 commit 短路(短编辑单 op 无差分帧不再白等 420s)",
+    "S9: 新增多页站点生成场景(3 页断言:preview sid 集合/ghost 并排/frames 落库/唯一性/revision)",
+    "S3: geom 锚定「登录」frame + blur+「1」适应"
+  ],
+
+  "defects": {
+    "summary": "#4-#15 共 12 个真实缺陷全部修复并有实证",
+    "list": [
+      { "id": "#10", "title": "create 分支 surfaceId 消歧", "evidence": "S1 新页 frame_page_2 未覆盖 starter;S4 消歧产物 frame_page_3" },
+      { "id": "#11", "title": "ContextBuilder 页面级选中(nodeIds 空→整 surface 入 scope)", "evidence": "纯逻辑隔离验证命中/不命中;S4 replaceProps surfaceId=frame_page_2" },
+      { "id": "#12", "title": "starter 项目 frames 表补行", "evidence": "十二轮起 frames 表出现 79|frame_page;S1 流式预览 ghost 正常" },
+      { "id": "#13", "title": "refine 模式无 target 静默整页重建→显式报错", "evidence": "十六轮 S4 两 attempt 按预期 failed 且文案正确,不再无视「不要新建页面」约束" },
+      { "id": "#15", "title": "跨项目 Run 污染阻塞删除", "evidence": "副本重放定位 conversations FK→projectId=105 引用 104 会话;runs.create 会话归属校验+remove 自愈;remove(104) 200 ok;十五~十七轮清理主项目全部成功" },
+      { "id": "本轮新增", "title": "S3 交互错位(geom 锚定)+点选几何(适应全部)+gesto click 吞没(down 即选中兜底,另两项归档)", "evidence": "S3-1/2 修复后稳定通过;S3-7 click 捕获实证到达 frame 但被库层吞没" }
+    ],
+    "earlierFixed": "#4-#6、#8、#9 见先前轮次报告(plan f094953f 执行记录)"
+  },
+
+  "knownRemaining": [
+    { "item": "S3-3/S3-7", "nature": "产品库集成层(gesto click 抑制/Moveable resize 时序)", "suggestion": "单独排查 react-moveable/react-selecto 升级或 document 级 mousedown 选中" },
+    { "item": "S1 组件断言 input=0(连续三轮)", "nature": "LLM 内容选择(用非 input 元素渲染输入框),iframe 内容含「登录」链路正常", "suggestion": "断言改为语义级(输入框角色/占位文本)或固定更强模型" },
+    { "item": "S9 commit 时长", "nature": "三页全链路(评审+修复循环)>30min,LLM 端点速度限制", "suggestion": "更强模型或评审轮次上限策略;机制断言(preview/ghost)已连续两轮全绿" },
+    { "item": "UX 评审两轮未收敛波动", "nature": "模型质量波动,attempt 机制已覆盖", "suggestion": "DB 复核 ops 类型判定链路正常即可通过(链路与质量分离)" }
+  ],
+
+  "artifacts": {
+    "logs": ["llm-run15.log", "llm-run16.log", "llm-run17.log", "llm-run17-s4.log"],
+    "screenshots": ["S1-streaming-1.png", "S1-final.png", "S9-ghosts.png(多页 ghost 并排证据)", "S9-final.png", "S4-final.png", "S3-*.png"]
+  }
+}

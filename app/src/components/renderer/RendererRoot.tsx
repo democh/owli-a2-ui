@@ -54,6 +54,26 @@ class RenderErrorBoundary extends Component<{ children: ReactNode; resetKey?: un
   }
 }
 
+/** M6 视觉回归样例:四预设共用同一结构,体现设计语言差异(props 均为渲染器已知字段) */
+const DEMO_SURFACE_DOC: SurfaceDoc = {
+  version: "1.0",
+  page: { id: "demo", title: "视觉回归样例", device: "desktop" },
+  theme: { preset: "shadcn", tokens: { primary: "#4f46e5", background: "#ffffff", surface: "#f4f4f5", text: "#18181b", mutedText: "#71717a", accent: "#0ea5e9", radius: 10, font: "" } },
+  components: {
+    root: { type: "Section", props: {}, children: ["nav", "hero", "cards", "row"] },
+    nav: { type: "Navbar", props: { logo: "A2UI", links: ["产品", "定价", "文档"] }, children: [] },
+    hero: { type: "Hero", props: { title: "AI 原生 UI 设计工作台", subtitle: "从一句话到可交付的界面设计", cta: "开始设计" }, children: [] },
+    cards: { type: "Grid", props: { columns: 3 }, children: ["c1", "c2", "c3"] },
+    c1: { type: "Card", props: { title: "结构生成", text: "信息架构与组件树" }, children: [] },
+    c2: { type: "Card", props: { title: "专业评审", text: "UX 评分与修复建议" }, children: [] },
+    c3: { type: "Card", props: { title: "工程交付", text: "可构建的 React 工程" }, children: [] },
+    row: { type: "Row", props: {}, children: ["b1", "b2"] },
+    b1: { type: "Button", props: { text: "主操作", variant: "primary" }, children: [] },
+    b2: { type: "Button", props: { text: "次操作" }, children: [] },
+  },
+  root: "root",
+};
+
 export default function RendererRoot() {
   const [doc, setDoc] = useState<SurfaceDoc | null>(null);
   const [preset, setPreset] = useState<PresetId>("shadcn");
@@ -67,6 +87,10 @@ export default function RendererRoot() {
   const [flashRect, setFlashRect] = useState<HoverRect | null>(null);
   const flashTimerRef = useRef<number | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
+  // M7 逐节点持久 Diff 着色:最近一次提交的增/改/删组件
+  const [diff, setDiff] = useState<{ added: string[]; updated: string[]; removed: string[] } | null>(null);
+  // M7 评论锚点气泡:未解决评论(按 nodeId 定位)
+  const [commentMarks, setCommentMarks] = useState<{ id: number; nodeId: string; body: string; authorName: string | null }[]>([]);
   // 供事件回调读取最新 doc(避免闭包过期);不在渲染期读写
   const docRef = useRef<SurfaceDoc | null>(null);
   useEffect(() => {
@@ -74,6 +98,14 @@ export default function RendererRoot() {
   }, [doc]);
 
   useEffect(() => {
+    // M6 视觉回归 demo 模式:/render?preset=x&demo=1 → 内置静态样例,不注册 IPC(基线对象稳定)
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("demo") === "1") {
+      const p = params.get("preset");
+      if (p === "shadcn" || p === "antd" || p === "element" || p === "custom") setPreset(p);
+      setDoc(DEMO_SURFACE_DOC);
+      return;
+    }
     const onMessage = (e: MessageEvent) => {
       if (e.origin !== window.location.origin) return;
       const msg = e.data as HostMessage;
@@ -92,6 +124,10 @@ export default function RendererRoot() {
         flashTimerRef.current = msg.aid
           ? window.setTimeout(() => setFlashAid(null), 1600)
           : null;
+      } else if (msg.type === "setDiff") {
+        setDiff(msg.diff);
+      } else if (msg.type === "setComments") {
+        setCommentMarks(msg.comments.filter((c) => c.nodeId));
       }
     };
     window.addEventListener("message", onMessage);
@@ -249,6 +285,30 @@ export default function RendererRoot() {
 
   const tree = useMemo(() => (doc && registry ? renderNode(doc.root) : null), [doc, registry, renderNode]);
 
+  // 评论气泡定位:doc/评论变化后测量锚点位置(上一帧 DOM 测量,差一帧可接受)
+  const [commentRects, setCommentRects] = useState<{ c: (typeof commentMarks)[number]; rect: HoverRect }[]>([]);
+  useEffect(() => {
+    if (!commentMarks.length || !rootRef.current) { setCommentRects([]); return; }
+    const container = rootRef.current.getBoundingClientRect();
+    const rects = commentMarks.flatMap((c) => {
+      const el = rootRef.current?.querySelector(`[data-aid="${CSS.escape(c.nodeId)}"]`) as HTMLElement | null;
+      if (!el) return [];
+      const box = (el.firstElementChild ?? el).getBoundingClientRect();
+      return [{ c, rect: { aid: c.nodeId, x: box.left - container.left, y: box.top - container.top, w: box.width, h: box.height } }];
+    });
+    setCommentRects(rects);
+  }, [commentMarks, doc]);
+  // 同锚点多条评论聚合为一个气泡,显示条数
+  const commentBubbles = useMemo(() => {
+    const byNode = new Map<string, { nodeId: string; count: number; first: (typeof commentMarks)[number]; rect: HoverRect }>();
+    for (const { c, rect } of commentRects) {
+      const g = byNode.get(c.nodeId);
+      if (g) g.count += 1;
+      else byNode.set(c.nodeId, { nodeId: c.nodeId, count: 1, first: c, rect });
+    }
+    return [...byNode.values()];
+  }, [commentRects]);
+
   const overlay = (rect: HoverRect, color: string, dashed = false) => (
     <div
       key={`${rect.aid}-${dashed}`}
@@ -268,6 +328,15 @@ export default function RendererRoot() {
     </div>
   );
 
+  // M7 Diff 着色样式:wrapper 为 display:contents,outline 应用到其内部实际盒子上
+  const diffCss = diff
+    ? [
+        ...diff.added.map((aid) => `[data-aid="${CSS.escape(aid)}"] > * { outline: 2px solid rgba(34,197,94,.55); outline-offset: 2px; border-radius: 4px; }`),
+        ...diff.updated.map((aid) => `[data-aid="${CSS.escape(aid)}"] > * { outline: 2px solid rgba(59,130,246,.55); outline-offset: 2px; border-radius: 4px; }`),
+        ...diff.removed.map((aid) => `[data-aid="${CSS.escape(aid)}"] > * { outline: 2px dashed rgba(239,68,68,.6); outline-offset: 2px; border-radius: 4px; opacity: .55; }`),
+      ].join("\n")
+    : "";
+
   const body = (
     <div
       ref={rootRef}
@@ -286,12 +355,26 @@ export default function RendererRoot() {
         cursor: inspect ? "crosshair" : undefined,
       }}
     >
+      {diffCss ? <style>{diffCss}</style> : null}
       <RenderErrorBoundary resetKey={doc}>
         {tree ?? empty}
       </RenderErrorBoundary>
       {inspect && hover && !selectedAids.includes(hover.aid) && overlay(hover, "#6366f1", true)}
       {inspect && selectedRects.map((r) => overlay(r, "#4f46e5"))}
       {flashRect && overlay(flashRect, "#6366f1")}
+      {commentBubbles.map(({ nodeId, count, first, rect }) => (
+        <div
+          key={first.id}
+          className="pointer-events-auto absolute z-40 -translate-y-1/2"
+          style={{ left: rect.x + rect.w - 10, top: rect.y }}
+          title={`${first.authorName ?? "评论"}:${first.body}${count > 1 ? `(共 ${count} 条)` : ""}`}
+          onClick={() => postToHost({ source: IPC_SOURCE, type: "commentClick", nodeId })}
+        >
+          <span className="flex h-5 min-w-5 cursor-pointer items-center justify-center rounded-full rounded-bl-none bg-amber-400 px-1 text-[10px] font-bold text-white shadow transition hover:scale-110">
+            {count > 1 ? count : "💬"}
+          </span>
+        </div>
+      ))}
     </div>
   );
 

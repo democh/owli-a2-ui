@@ -5,6 +5,7 @@ import path from "path";
 import { env } from "../lib/env";
 import * as schema from "@db/schema";
 import * as relations from "@db/relations";
+import { bootstrapHarnessTables } from "@db/ddl";
 
 const fullSchema = { ...schema, ...relations };
 
@@ -34,6 +35,8 @@ export function getDb() {
       completionTokens INTEGER NOT NULL DEFAULT 0,
       createdAt INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
     )`);
+    // Harness Agent 新表幂等自举(project_revisions / op_batches / runs / frames 等)
+    bootstrapHarnessTables(sqlite);
     instance = drizzle(sqlite, { schema: fullSchema });
   }
   return instance;

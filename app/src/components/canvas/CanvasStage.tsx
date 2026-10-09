@@ -16,9 +16,10 @@ import Selecto from "react-selecto";
 import { useWorkspace } from "@/stores/workspaceStore";
 import { trpc } from "@/providers/trpc";
 import { FrameView } from "./FrameView";
+import { CanvasMinimap, type ViewportRect } from "./CanvasMinimap";
 
 const MIN_ZOOM = 0.1;
-const MAX_ZOOM = 2.5;
+const MAX_ZOOM = 4.0; // 文档 §7.1:最大缩放 400%
 
 export function CanvasStage() {
   const viewerRef = useRef<InfiniteViewer>(null);
@@ -37,6 +38,7 @@ export function CanvasStage() {
   const updatePageLocal = useWorkspace((s) => s.updatePageLocal);
 
   const persistMut = trpc.pages.update.useMutation();
+    const moveBoardMut = trpc.workspace.moveFrameToBoard.useMutation();
   const removeMut = trpc.pages.remove.useMutation();
   const persistTimers = useRef(new Map<number, ReturnType<typeof setTimeout>>());
   // 空白处 mousedown 坐标(用于区分"单击清空选择"与"拖拽平移")
@@ -71,6 +73,34 @@ export function CanvasStage() {
   // 视口操作
   // ---------------------------------------------------------------------------
   /** 以视口内某点(容器坐标)为中心缩放 */
+  /** 视口内容矩形(未缩放内容坐标):虚拟化与 Minimap 消费;rAF 节流避免滚动高频 setState */
+  const [viewRect, setViewRect] = useState<ViewportRect | null>(null);
+  const viewRectRaf = useRef(0);
+  // 状态栏信息广播节流(≤10 次/秒,文档 §2)
+  const lastInfoPush = useRef(0);
+  const syncViewRect = useCallback(() => {
+    if (viewRectRaf.current) return;
+    viewRectRaf.current = requestAnimationFrame(() => {
+      viewRectRaf.current = 0;
+      const v = viewerRef.current;
+      if (!v) return;
+      setViewRect({
+        left: v.getScrollLeft(),
+        top: v.getScrollTop(),
+        width: v.getContainerWidth() / v.getZoom(),
+        height: v.getContainerHeight() / v.getZoom(),
+      });
+      // §2 状态栏:缩放/坐标广播(100ms 节流)
+      const now = Date.now();
+      if (now - lastInfoPush.current > 100) {
+        lastInfoPush.current = now;
+        window.dispatchEvent(new CustomEvent("a2:viewport", {
+          detail: { zoom: v.getZoom(), x: Math.round(v.getScrollLeft()), y: Math.round(v.getScrollTop()) },
+        }));
+      }
+    });
+  }, []);
+
   const zoomAt = useCallback((nextZoom: number, px?: number, py?: number) => {
     const viewer = viewerRef.current;
     if (!viewer) return;
@@ -83,8 +113,9 @@ export function CanvasStage() {
     const cy = (viewer.getScrollTop() + my) / old;
     viewer.setZoom(z);
     viewer.scrollTo(cx * z - mx, cy * z - my);
+    syncViewRect();
     setZoom(z);
-  }, [setZoom]);
+  }, [setZoom, syncViewRect]);
 
   /** 将内容坐标点居中到视口(scrollTo 的坐标是未缩放内容坐标,语义为"置于视口左上") */
   const centerOn = useCallback((cx: number, cy: number, z?: number, duration = 0) => {
@@ -130,6 +161,39 @@ export function CanvasStage() {
     setSelectedPages([id]);
   }, [centerOn, setSelectedPages, setZoom]);
 
+  /** §7 自动排列:按 PageBoard 分组 → 组内网格化 → 组间水平排列;整体进撤销栈 */
+  const autoArrange = useCallback(() => {
+    const ps = useWorkspace.getState().pages;
+    if (!ps.length) return;
+    useWorkspace.getState().snapshotForUndo();
+    const GAP = 80; // 组内间距
+    const GROUP_GAP = 120; // 组间间距
+    const groups = new Map<number, typeof ps>(); // boardId(含 null→负 hash)分组,保持原顺序
+    for (const p of ps) {
+      const key = p.boardId ?? -1_000_000 - p.id;
+      const g = groups.get(key);
+      if (g) g.push(p);
+      else groups.set(key, [p]);
+    }
+    let cursorX = 60;
+    for (const members of groups.values()) {
+      const cols = Math.max(1, Math.ceil(Math.sqrt(members.length)));
+      const cellW = Math.max(...members.map((p) => p.width)) + GAP;
+      const cellH = Math.max(...members.map((p) => p.height + 34)) + GAP;
+      members.forEach((p, i) => {
+        const col = i % cols;
+        const row = Math.floor(i / cols);
+        const x = cursorX + col * cellW;
+        const y = 60 + row * cellH;
+        updatePageLocal(p.id, { posX: x, posY: y });
+        persistPage(p.id, { posX: x, posY: y });
+      });
+      const groupCols = Math.min(cols, members.length);
+      cursorX += groupCols * (cellW) - GAP + GROUP_GAP;
+    }
+    setTimeout(() => fitAll(200), 50);
+  }, [updatePageLocal, persistPage, fitAll]);
+
   // ---------------------------------------------------------------------------
   // 视口持久化(按项目)
   // ---------------------------------------------------------------------------
@@ -153,11 +217,15 @@ export function CanvasStage() {
   useEffect(() => {
     const v = viewerRef.current;
     if (!v || !viewportKey) return;
-    const onScroll = () => scheduleViewportSave();
+    syncViewRect(); // 初始视口(Minimap/虚拟化首帧可用)
+    const onScroll = () => {
+      scheduleViewportSave();
+      syncViewRect();
+    };
     const el = v.getViewport();
     el.addEventListener("scroll", onScroll, { passive: true });
     return () => el.removeEventListener("scroll", onScroll);
-  }, [viewportKey, scheduleViewportSave, viewportEl]);
+  }, [viewportKey, scheduleViewportSave, syncViewRect, viewportEl]);
 
   // ---------------------------------------------------------------------------
   // 挂载:定位 viewport、恢复视口或初始化缩放
@@ -216,6 +284,13 @@ export function CanvasStage() {
       viewerRef.current?.resize();
     };
     (window as unknown as { __focusPage?: (id: number) => void }).__focusPage = (id) => focusPage(id);
+    // 评审/定位/Diff 高亮共用:surfaceId → 画框聚焦 + 节点闪烁(requestHighlight → iframe 高亮 1.6s)
+    (window as unknown as { __focusNode?: (sid: string, nid?: string) => void }).__focusNode = (sid, nid) => {
+      const target = useWorkspace.getState().pages.find((x) => x.surfaceId === sid);
+      if (!target) return;
+      focusPage(target.id);
+      if (nid) useWorkspace.getState().requestHighlight(target.id, nid);
+    };
     (window as unknown as { __fitCanvas?: () => void }).__fitCanvas = () => fitAll();
     return () => {
       delete (window as unknown as Record<string, unknown>).__resizeCanvas;
@@ -328,7 +403,7 @@ export function CanvasStage() {
         }
         return;
       }
-      // 数字 0:恢复 100% · 数字 1:适应全部
+      // 数字 0 / Shift+0:恢复 100% · 数字 1 / Shift+1:适应全部 · Shift+2:适应当前页(文档 §7)
       if (e.key === "0") {
         e.preventDefault();
         const viewer = viewerRef.current;
@@ -342,6 +417,21 @@ export function CanvasStage() {
         e.preventDefault();
         noteUserSteer();
         fitAll();
+        scheduleViewportSave();
+        return;
+      }
+      if (e.key === "2" && e.shiftKey) {
+        e.preventDefault();
+        noteUserSteer();
+        const first = ids[0] ?? useWorkspace.getState().pages[0]?.id;
+        if (first != null) focusPage(first);
+        scheduleViewportSave();
+        return;
+      }
+      // Shift+A:自动排列(§7)
+      if (e.key.toLowerCase() === "a" && e.shiftKey) {
+        e.preventDefault();
+        autoArrange();
         scheduleViewportSave();
         return;
       }
@@ -363,7 +453,7 @@ export function CanvasStage() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [zoomAt, fitAll, updatePageLocal, persistPage, removeMut, scheduleViewportSave, noteUserSteer]);
+  }, [zoomAt, fitAll, focusPage, autoArrange, updatePageLocal, persistPage, removeMut, scheduleViewportSave, noteUserSteer]);
 
   // 选中元素变化 → 更新 Moveable target(需查询 DOM,只能在提交后执行)
   useEffect(() => {
@@ -378,6 +468,55 @@ export function CanvasStage() {
     () => pages.map((p) => `.a2-frame[data-page-id="${p.id}"]`),
     [pages],
   );
+
+  /** PageBoard 整体拖动:拖标题栏平移组内全部画框,松手快照+批量持久化(文档 §6.1) */
+  const boardDragRef = useRef<{ sx: number; sy: number; els: HTMLElement[]; base: { l: number; t: number }[]; moved: boolean } | null>(null);
+  const onBoardMouseDown = (bid: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    const ids = useWorkspace.getState().pages.filter((p) => p.boardId === bid).map((p) => p.id);
+    const els = ids
+      .map((id) => viewportEl?.querySelector(`.a2-frame[data-page-id="${id}"]`))
+      .filter((el): el is HTMLElement => !!el);
+    if (!els.length) return;
+    boardDragRef.current = {
+      sx: e.clientX,
+      sy: e.clientY,
+      els,
+      base: els.map((el) => ({ l: parseFloat(el.style.left) || 0, t: parseFloat(el.style.top) || 0 })),
+      moved: false,
+    };
+    const move = (ev: MouseEvent) => {
+      const st = boardDragRef.current;
+      if (!st) return;
+      const dx = ev.clientX - st.sx;
+      const dy = ev.clientY - st.sy;
+      if (Math.abs(dx) + Math.abs(dy) > 3) st.moved = true;
+      st.els.forEach((el, i) => {
+        el.style.left = `${st.base[i].l + dx}px`;
+        el.style.top = `${st.base[i].t + dy}px`;
+      });
+    };
+    const up = () => {
+      window.removeEventListener("mousemove", move);
+      window.removeEventListener("mouseup", up);
+      const st = boardDragRef.current;
+      boardDragRef.current = null;
+      if (!st || !st.moved) return;
+      useWorkspace.getState().snapshotForUndo();
+      st.els.forEach((el) => {
+        const id = Number(el.dataset.pageId);
+        useWorkspace.getState().updatePageLocal(id, {
+          posX: Math.round(parseFloat(el.style.left)),
+          posY: Math.round(parseFloat(el.style.top)),
+        });
+        persistPage(id, { posX: Math.round(parseFloat(el.style.left)), posY: Math.round(parseFloat(el.style.top)) });
+      });
+      syncViewRect();
+    };
+    window.addEventListener("mousemove", move);
+    window.addEventListener("mouseup", up);
+  };
 
   const commitGeometry = (el: HTMLElement) => {
     const id = Number(el.dataset.pageId);
@@ -395,6 +534,33 @@ export function CanvasStage() {
     if (Object.keys(patch).length) {
       updatePageLocal(id, patch);
       persistPage(id, patch);
+    }
+
+    // M7 PageBoard 归组(保守方案):frame 中心落入其他底板的成员包围盒 → 变更归属
+    const finalX = patch.posX ?? page.posX;
+    const finalY = patch.posY ?? page.posY;
+    const cx = finalX + page.width / 2;
+    const cy = finalY + page.height / 2;
+    const state = useWorkspace.getState();
+    const PAD = 40;
+    const grouped = new Map<number, { title: string; minX: number; minY: number; maxX: number; maxY: number }>();
+    for (const p of state.pages) {
+      if (p.boardId == null || p.id === id) continue;
+      const g = grouped.get(p.boardId);
+      const title = g?.title || p.boardTitle || p.title;
+      if (!g) grouped.set(p.boardId, { title, minX: p.posX, minY: p.posY, maxX: p.posX + p.width, maxY: p.posY + p.height });
+      else {
+        g.minX = Math.min(g.minX, p.posX); g.minY = Math.min(g.minY, p.posY);
+        g.maxX = Math.max(g.maxX, p.posX + p.width); g.maxY = Math.max(g.maxY, p.posY + p.height);
+      }
+    }
+    for (const [boardId, box] of grouped) {
+      if (boardId === page.boardId) continue;
+      if (cx >= box.minX - PAD && cx <= box.maxX + PAD && cy >= box.minY - PAD && cy <= box.maxY + PAD) {
+        moveBoardMut.mutate({ frameId: id, boardId });
+        updatePageLocal(id, { boardId, boardTitle: box.title });
+        break;
+      }
     }
   };
 
@@ -434,6 +600,11 @@ export function CanvasStage() {
         className="a2-viewer relative h-full w-full"
         useWheelScroll
         useMouseDrag
+        // 关闭 Gesto 的 click 拦截:平移拖拽结束后下一次独立 click(点选 frame)会被吞,
+        // 导致用户平移画布后首次点选无响应(实测缺陷);拖拽误触由 FrameView 的 4px 位移守卫兑底
+        preventClickEventOnDrag={false}
+        preventClickEventOnDragStart={false}
+        preventClickEventByCondition={false}
         zoomRange={[MIN_ZOOM, MAX_ZOOM]}
         rangeX={[-2000, 20000]}
         rangeY={[-2000, 20000]}
@@ -449,7 +620,51 @@ export function CanvasStage() {
         }}
       >
         <div className="relative" style={{ width: 20000, height: 20000 }}>
-          {pages.map((p) => <FrameView key={p.id} page={p} onFocus={() => focusPage(p.id)} />)}
+          {/* PageBoard 分组底板(文档 §6.1):同 board 的画框共享底板与标题;纯视觉层不拦截事件 */}
+          {Object.entries(
+            pages.reduce<Record<number, { title: string; minX: number; minY: number; maxX: number; maxY: number; count: number }>>((acc, p) => {
+              if (p.boardId == null) return acc;
+              const g = (acc[p.boardId] ??= { title: p.boardTitle ?? "", minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity, count: 0 });
+              g.minX = Math.min(g.minX, p.posX);
+              g.minY = Math.min(g.minY, p.posY);
+              g.maxX = Math.max(g.maxX, p.posX + p.width);
+              g.maxY = Math.max(g.maxY, p.posY + p.height + 34);
+              g.count++;
+              return acc;
+            }, {}),
+          ).map(([bid, g]) => (
+            <div
+              key={`board-${bid}`}
+              className="pointer-events-none absolute rounded-xl border border-dashed border-neutral-300/80 bg-neutral-50/60"
+              style={{
+                left: g.minX - 14,
+                top: g.minY - 30,
+                width: g.maxX - g.minX + 28,
+                height: g.maxY - g.minY + 44,
+              }}
+            >
+              <div
+                data-no-deselect
+                onMouseDown={(e) => onBoardMouseDown(Number(bid), e)}
+                className="pointer-events-auto absolute -top-[22px] left-0 flex cursor-grab items-center gap-1.5 rounded px-1 text-[11px] font-medium text-neutral-400 hover:text-neutral-600 active:cursor-grabbing"
+                title="拖动移动整个页面组"
+              >
+                <span className="size-1.5 rounded-full bg-neutral-300" />
+                {g.title || "页面"}
+                <span className="text-neutral-300">· {g.count} 视口</span>
+              </div>
+            </div>
+          ))}
+          {pages.map((p) => {
+            const mapMode = zoom < 0.35;
+            const lazy = !!viewRect && !mapMode && (
+              p.posX + p.width < viewRect.left - 400 ||
+              p.posX > viewRect.left + viewRect.width + 400 ||
+              p.posY + p.height + 34 < viewRect.top - 400 ||
+              p.posY > viewRect.top + viewRect.height + 400
+            );
+            return <FrameView key={p.id} page={p} onFocus={() => focusPage(p.id)} mapMode={mapMode} lazy={lazy} />;
+          })}
           {/* 流式生成幻影画框:LLM 逐 token 输出期间渐进渲染(多页逐个出现),完成后被真实页面替换 */}
           {draft?.ghosts.map((g) => <FrameView key={`a2-draft-ghost-${g.id}`} page={g} ghost />)}
           {viewportEl && (
@@ -534,6 +749,17 @@ export function CanvasStage() {
         }}
       />
 
+      {/* Minimap(文档 §7.2):页面色块 + 视口框,点击跳转 */}
+      {pages.length > 0 && (
+        <div data-no-deselect className="absolute right-4 top-3 z-20">
+          <CanvasMinimap
+            pages={pages}
+            viewport={viewRect}
+            onJump={(cx, cy) => centerOn(cx, cy)}
+          />
+        </div>
+      )}
+
       {/* 缩放控制条 */}
       <div data-no-deselect className="absolute bottom-4 right-4 z-20 flex items-center gap-1 rounded-lg border border-neutral-200 bg-white/90 px-1.5 py-1 text-xs text-neutral-600 shadow-sm backdrop-blur">
         <button title="缩小 (-)" className="rounded px-1.5 py-0.5 hover:bg-neutral-100"
@@ -549,6 +775,12 @@ export function CanvasStage() {
         <span className="mx-0.5 h-4 w-px bg-neutral-200" />
         <button title="适应全部页面 (按 1)" className="rounded px-1.5 py-0.5 hover:bg-neutral-100"
           onClick={() => { fitAll(); scheduleViewportSave(); }}>适应</button>
+        <button title="自动排列(按 board 分组网格化,Shift+A)" className="rounded px-1.5 py-0.5 hover:bg-neutral-100"
+          onClick={() => { autoArrange(); scheduleViewportSave(); }}>排列</button>
+        <span className="mx-0.5 h-4 w-px bg-neutral-200" />
+        <span className="select-none px-1 text-[10px] tabular-nums text-neutral-400">
+          X:{viewRect ? Math.round(viewRect.left) : 0} Y:{viewRect ? Math.round(viewRect.top) : 0}
+        </span>
       </div>
     </div>
   );
