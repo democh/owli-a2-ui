@@ -2,7 +2,8 @@ import type { AgentEvent, AgentRunRequest, ApprovalAccept, DesignBrief, DesignPl
 import { designBriefSchema } from "@contracts/agent";
 import type { ClarificationResponse } from "@contracts/clarification";
 import type { IROperation, IRSurface, Frame } from "@contracts/design-ir";
-import { DEVICES, applyOps, sitemapSchema, type DeviceId, type Sitemap, type SurfaceDoc, type SurfaceOp } from "@contracts/a2ui";
+import { DEVICES, applyOps, sitemapSchema, type DeviceId, type Sitemap, type SurfaceDoc, type SurfaceOp, type ThemeTokens, type ThemeVisual } from "@contracts/a2ui";
+import { resolveStyleTheme, styleDirectiveText } from "@contracts/style";
 import { env } from "../../lib/env";
 import { loadHead, commitRunChanges } from "../../command/commandService";
 import { RunManager, RunCancelledError } from "../run/RunManager";
@@ -399,6 +400,25 @@ export async function executeRun(runId: string): Promise<void> {
     RunManager.emit(runId, { type: "design.style_resolved", runId, styleDirection: style });
     saveStyle(runId, style);
 
+    // ③' 风格 → 主题(确定性):
+    // 此前 resolveStyleDirection 的 tokenOverrides 只进了提示词,项目 IR 永远用默认令牌,
+    // 导致"选了暗色/玻璃风格却渲染成白底"。现由编排层求解后作为 setTokens 一并提交。
+    const styleTheme = resolveStyleTheme(context.doc.theme, style);
+    RunManager.emit(runId, {
+      type: "run.step",
+      runId,
+      card: {
+        cardId: `card_theme_${Date.now().toString(36)}`,
+        tool: "style",
+        title: "主题令牌求解",
+        status: "done",
+        durationMs: 0,
+        tokens: 0,
+        outputSummary: `${styleTheme.visual.cardStyle} · ${styleTheme.visual.density} · primary ${styleTheme.tokens.primary} · radius ${styleTheme.tokens.radius}px`,
+        inputRefs: [`背景 ${styleTheme.tokens.background}`, `强调 ${styleTheme.tokens.accent}`],
+      },
+    });
+
     // ④ skills(同步路由,零 token;直接发完成卡)
     RunManager.toStatus(runId, "selecting_skills");
     const skills = selectSkills(context, briefFinal);
@@ -518,14 +538,14 @@ export async function executeRun(runId: string): Promise<void> {
     RunManager.toStatus(runId, "generating");
     const generateOut = await withStepCard(
       runId, "generate", "站点生成",
-      () => generateWithParseRetry(runId, context, provider, llmCfg, { plan, style, skillContext, brief: briefFinal }),
+      () => generateWithParseRetry(runId, context, provider, llmCfg, { plan, style, theme: styleTheme, skillContext, brief: briefFinal }),
       describeGenerateOut,
     );
     checkRunTokenBudget(runId, request.constraints.maxTokens); // M6-2:token 预算
 
     // ⑦ parsing + projecting(进入 生成→校验→评审→门禁 修复循环,≤2 轮)
     RunManager.toStatus(runId, "parsing");
-    const first = assembleOps(context, generateOut);
+    const first = assembleOps(context, generateOut, styleTheme);
     let finalOps = first.ops;
     let boards = first.boards;
     let framesSpec = first.framesSpec;
@@ -641,9 +661,16 @@ export async function executeRun(runId: string): Promise<void> {
           .slice(0, 3)
           .map((i) => `- [${i.severity}/${i.category}] ${i.message.slice(0, 140)}${i.recommendation ? ` 建议:${i.recommendation.slice(0, 80)}` : ""}`)
           .join("\n");
+        // 工艺类 P2(P2 一般不阻断门禁,但正是“看起来像 AI 生成”的根因)
+        const craftIssues = (report?.issues ?? [])
+          .filter((i) => i.severity === "P2" && /视觉|排版|色彩|留白|层级|工艺|style|visual/i.test(`${i.category}${i.message}`))
+          .slice(0, 3)
+          .map((i) => `- [工艺] ${i.message.slice(0, 120)}${i.recommendation ? ` 建议:${i.recommendation.slice(0, 70)}` : ""}`)
+          .join("\n");
         const errorDetail = [
           validationErrors ? `确定性校验错误(必须全部解决):\n${validationErrors}` : "",
           reviewIssues ? `评审问题(尽量解决):\n${reviewIssues}` : "",
+          craftIssues ? `视觉工艺问题(用组件与样式修正,不要整体重写):\n${craftIssues}` : "",
         ]
           .filter(Boolean)
           .join("\n");
@@ -651,13 +678,15 @@ export async function executeRun(runId: string): Promise<void> {
           generateWithParseRetry(runId, context, provider, llmCfg, {
             plan,
             style,
+            // 修复轮次同样携带已求解主题:否则预览/令牌回写会回退到旧主题
+            theme: styleTheme,
             skillContext,
             brief: briefFinal,
             repairHint: `上一轮 Proposal 未通过门禁(${repairReasons})。${errorDetail ? `\n具体错误清单:\n${errorDetail}\n` : ""}请做最小修复:严格使用 Catalog 组件、https 图片地址,并针对性解决上述问题,不改变整体设计方向。`,
           }),
           describeGenerateOut,
         );
-        const asm = assembleOps(context, retry);
+        const asm = assembleOps(context, retry, styleTheme);
         finalOps = asm.ops;
         boards = asm.boards;
         framesSpec = asm.framesSpec;
@@ -924,6 +953,8 @@ export async function executeRun(runId: string): Promise<void> {
 interface GenerateOptions {
   plan?: DesignPlan;
   style?: StyleDirection;
+  /** 风格求解后的主题(令牌 + 视觉语言):生成、预览、提交共用同一份,避免"提示词说暗色、画布还是白底" */
+  theme?: { tokens: ThemeTokens; visual: ThemeVisual };
   skillContext?: string;
   brief?: DesignBrief;
   repairHint?: string;
@@ -980,10 +1011,14 @@ async function generate(
   // 块名带「单页参考」语义:多页拆分后此块会进入 sitemap 与逐页 prompt,
   // 必须声明它是单页(参考页)的内部分区,防止站点页面清单被首页 IA 收敛/带偏
   const planBlock = opts.plan
-    ? `\n[设计规划·单页信息架构参考]\n信息架构:${opts.plan.informationArchitecture.map((s) => `${s.title}(${s.purpose})`).join(" → ")}\n布局:${opts.plan.layout.pattern};密度:${opts.plan.layout.density}\n设计理由:${opts.plan.rationale}`
+    ? `\n[设计规划·单页信息架构参考]\n信息架构:${opts.plan.informationArchitecture.map((s) => `${s.title}(${s.purpose})`).join(" → ")}\n布局:${opts.plan.layout.pattern};密度:${opts.plan.layout.density}\n${
+        opts.plan.artDirection?.mood
+          ? `艺术方向:${opts.plan.artDirection.mood};首屏原型 ${opts.plan.artDirection.heroArchetype};节奏 ${opts.plan.artDirection.sectionRhythm};字体 ${opts.plan.artDirection.typographyScale};色彩 ${opts.plan.artDirection.colorFocus};图像 ${opts.plan.artDirection.imageStrategy}\n`
+          : ""
+      }设计理由:${opts.plan.rationale}`
     : "";
   const styleBlock = opts.style
-    ? `\n[风格方向]\n关键词:${opts.style.visualKeywords.join("、") || "(无)"};密度:${opts.style.layoutPreferences.density};圆角:${opts.style.layoutPreferences.cornerRadius}`
+    ? `\n${styleDirectiveText(opts.style, opts.theme ?? { tokens: context.doc.theme.tokens, visual: context.doc.theme.visual })}`
     : "";
   const skillBlock = opts.skillContext ? `\n[启用的设计 Skill]\n${opts.skillContext}` : "";
   const assumptionBlock = opts.brief?.assumptions.length ? `\n[设计假设]\n${opts.brief.assumptions.map((a) => `- ${a}`).join("\n")}` : "";
@@ -1017,7 +1052,7 @@ async function generate(
     }
     const userMsg = [
       buildOpsUserMessage({
-        tokens: context.doc.theme.tokens,
+        tokens: opts.theme?.tokens ?? context.doc.theme.tokens,
         contextNodes,
         selectedDesc: buildSelectedDesc(nodeIds, (a) => surface.components[a]?.type),
         instruction: `${request.userMessage}${planBlock}${styleBlock}${skillBlock}${assumptionBlock}${repairBlock}`,
@@ -1027,7 +1062,11 @@ async function generate(
     // edit 就地流式预览:节流回传累积串 → 半截 ops 容错应用到目标画框(不落库)
     const previewSurface = {
       ...(surface as unknown as SurfaceDoc),
-      theme: { preset: context.doc.theme.preset, tokens: context.doc.theme.tokens },
+      theme: {
+        preset: context.doc.theme.preset,
+        tokens: opts.theme?.tokens ?? context.doc.theme.tokens,
+        visual: opts.theme?.visual ?? context.doc.theme.visual,
+      },
     };
     const opsState = createPreviewDeltaState();
     const opsThrottle = createPreviewThrottle(
@@ -1052,12 +1091,18 @@ async function generate(
   // create / redesign 路径
   const device = request.constraints.targetPlatforms[0] === "mobile" ? "mobile" : "desktop";
   const requirement = `${request.userMessage}${planBlock}${styleBlock}${skillBlock}${assumptionBlock}${repairBlock}`;
+  // 预览主题:与最终提交保持同一份令牌,否则生成过程看到的是白底/默认令牌,提交后才变色
+  const previewTheme = {
+    preset: context.doc.theme.preset,
+    tokens: opts.theme?.tokens ?? context.doc.theme.tokens,
+    visual: opts.theme?.visual ?? context.doc.theme.visual,
+  };
 
   // redesign:单页整页重生成(保留页面 id),流式渐进预览
   if (request.mode === "redesign_frame") {
     const userPrompt = buildRedesignUserPrompt(context.scopeSurfaces[0]?.surfaceId ?? "页面", requirement, device, historyBlock);
     const previewState = createPreviewDeltaState();
-    const createThrottle = createPreviewThrottle((acc) => emitPreview(runId, acc, previewState));
+    const createThrottle = createPreviewThrottle((acc) => emitPreview(runId, acc, previewState, 0, previewTheme));
     const textThrottle = createTextStreamThrottle((delta) =>
       RunManager.emit(runId, { type: "run.streamText", runId, text: delta }, { persist: false }),
     );
@@ -1121,6 +1166,11 @@ async function generate(
   }
   RunManager.emit(runId, { type: "run.step", runId, card: { cardId: sitemapCardId, tool: "generate", title: "站点结构规划", status: "done", durationMs: Date.now() - sitemapStart, outputSummary: `${sitemap.pages.length} 个页面 · 导航 ${sitemap.nav.join(" / ").slice(0, 80)}` } });
 
+  // 骨架幻影帧:站点结构一出即把「共 N 页」的空画框推上画布,消除 sitemap→首页首个组件闭合之间的
+  // 预览死区(此前逐页首个组件闭合前画布全黑,用户误以为「不联动/无流式」)。surfaceId 与后续
+  // 真实内容帧一致(preview_i),真实组件到达时原位升级(见 runStore design.preview 分支)。
+  emitSkeletonPages(runId, sitemap.pages.map((p) => p.title), device, previewTheme);
+
   // 阶段 2:逐页流式生成(单页文档;tryParseSurfaces 兼容单页分支;解析失败仅重试当前页一次)
   const docs: SurfaceDoc[] = [];
   const pageCount = sitemap.pages.length;
@@ -1148,7 +1198,7 @@ async function generate(
     };
     const previewState = createPreviewDeltaState();
     // 传全局页序号:预览 surfaceId 跨页唯一,前端多页 ghost 并排(否则全部堆在 preview_0 互相覆盖)
-    const createThrottle = createPreviewThrottle((acc) => emitPreview(runId, acc, previewState, i));
+    const createThrottle = createPreviewThrottle((acc) => emitPreview(runId, acc, previewState, i, previewTheme));
     // 逐页进度卡:每页一张,前端过程 Tab 可见推进(此前 5 页一卡到底,20 分钟无反馈)
     const pageCardId = `card_${runId}_page${i}`;
     const pageStart = Date.now();
@@ -1252,7 +1302,13 @@ function createPreviewDeltaState(): PreviewDeltaState {
  * pageOffset:逐页生成时传当前页的全局序号——预览 surfaceId 必须跨页唯一,
  * 否则每页都发 preview_0,前端 ghost/previewDocs 逐页互相覆盖(实测:多页生成只见单页闪现)
  */
-function emitPreview(runId: string, acc: string, state: PreviewDeltaState, pageOffset = 0): void {
+function emitPreview(
+  runId: string,
+  acc: string,
+  state: PreviewDeltaState,
+  pageOffset = 0,
+  themeOverride?: { preset?: SurfaceDoc["theme"]["preset"]; tokens: ThemeTokens; visual: ThemeVisual },
+): void {
   try {
     const pages = parsePartialPages(acc, { preset: "shadcn", device: "desktop" });
     for (let i = 0; i < pages.length; i++) {
@@ -1278,7 +1334,7 @@ function emitPreview(runId: string, acc: string, state: PreviewDeltaState, pageO
           surfaceId: sid,
           message: {
             kind: "updateComponents", surfaceId: sid, batchEnd: false, delta: true, upserts,
-            meta: { root: doc.root, title: doc.page.title, device: doc.page.device, theme: doc.theme },
+            meta: { root: doc.root, title: doc.page.title, device: doc.page.device, theme: themeOverride ?? doc.theme },
           } as unknown as Record<string, unknown>,
         },
         { persist: false },
@@ -1286,6 +1342,39 @@ function emitPreview(runId: string, acc: string, state: PreviewDeltaState, pageO
     }
   } catch {
     /* 半截 JSON 解析失败忽略 */
+  }
+}
+
+/**
+ * 骨架幻影帧:站点结构规划一出,把每个页面的空画框(仅标题/设备/主题)推上画布,
+ * 消除 sitemap→首页首个组件闭合之间的预览死区。meta.skeleton=true 让前端保留空组件 ghost;
+ * surfaceId 与后续真实内容帧(preview_i)一致,真实组件到达时原位升级(前端 mergePreviewDelta)。
+ */
+function emitSkeletonPages(
+  runId: string,
+  titles: string[],
+  device: string,
+  theme: { preset?: SurfaceDoc["theme"]["preset"]; tokens: ThemeTokens; visual: ThemeVisual },
+): void {
+  for (let i = 0; i < titles.length; i++) {
+    const sid = `preview_${i}`;
+    RunManager.emit(
+      runId,
+      {
+        type: "design.preview",
+        runId,
+        surfaceId: sid,
+        message: {
+          kind: "updateComponents",
+          surfaceId: sid,
+          batchEnd: false,
+          delta: true,
+          upserts: {},
+          meta: { skeleton: true, title: titles[i] || "生成中…", device, theme },
+        } as unknown as Record<string, unknown>,
+      },
+      { persist: false },
+    );
   }
 }
 
@@ -1430,16 +1519,28 @@ interface BoardSpec {
 function assembleOps(
   context: AgentContext,
   out: GenerateOut,
+  theme?: { tokens: ThemeTokens; visual: ThemeVisual },
 ): { ops: IROperation[]; boards: BoardSpec[]; framesSpec: { tempKey: string; boardTempKey: string; surfaceId: string; title: string; device: string; width: number; height: number; posX: number; posY: number }[]; newSurfaces: IRSurface[] } {
   const ops: IROperation[] = [];
   const boards: BoardSpec[] = [];
   const framesSpec: { tempKey: string; boardTempKey: string; surfaceId: string; title: string; device: string; width: number; height: number; posX: number; posY: number }[] = [];
   const newSurfaces: IRSurface[] = [];
 
+  /** 主题变更前置:同批 ops 内的新增页面与令牌一起提交,保证渲染与画布一致 */
+  const prependThemeOp = () => {
+    if (!theme) return;
+    const changed =
+      JSON.stringify(theme.tokens) !== JSON.stringify(context.doc.theme.tokens) ||
+      JSON.stringify(theme.visual) !== JSON.stringify(context.doc.theme.visual);
+    if (!changed) return;
+    ops.unshift({ op: "setTokens", tokens: theme.tokens, visual: theme.visual } as IROperation);
+  };
+
   if (out.kind === "edit") {
     for (const raw of out.rawOps ?? []) {
       ops.push({ ...raw, surfaceId: out.targetSurfaceId ?? "" } as unknown as IROperation);
     }
+    prependThemeOp();
     return { ops, boards, framesSpec, newSurfaces };
   }
 
@@ -1501,6 +1602,7 @@ function assembleOps(
   if (context.request.stylePreference) {
     // 由 style 解释器产出的 tokens 已并入 theme;此处保留 setTokens 语义给纯令牌偏好
   }
+  prependThemeOp();
   return { ops, boards, framesSpec, newSurfaces };
 }
 

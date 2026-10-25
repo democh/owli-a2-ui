@@ -5,8 +5,10 @@ import {
   DEVICE_IDS,
   PRESET_IDS,
   themeTokensSchema,
+  themeVisualSchema,
   catalogTypeSchema,
   type ThemeTokens,
+  type ThemeVisual,
   type PresetId,
 } from "./a2ui";
 
@@ -26,7 +28,7 @@ import {
 
 export { CATALOG_TYPES, DEVICES, DEVICE_IDS, PRESET_IDS };
 export type { ThemeTokens, PresetId };
-export { themeTokensSchema, catalogTypeSchema };
+export { themeTokensSchema, themeVisualSchema, catalogTypeSchema };
 export type DeviceId = keyof typeof DEVICES;
 
 // ---------------------------------------------------------------------------
@@ -78,6 +80,8 @@ export type IRSurface = z.infer<typeof irSurfaceSchema>;
 export const irThemeSchema = z.object({
   preset: z.enum(PRESET_IDS as [PresetId, ...PresetId[]]).default("shadcn"),
   tokens: themeTokensSchema.default(themeTokensSchema.parse({})),
+  /** 视觉语言(卡片质感/密度/动效):由 StyleDirection 确定性解析后写入 */
+  visual: themeVisualSchema.default(themeVisualSchema.parse({})),
 });
 export type IRTheme = z.infer<typeof irThemeSchema>;
 
@@ -148,7 +152,12 @@ export const irOperationSchema = z.discriminatedUnion("op", [
     index: z.number().int().optional(),
   }),
   // 主题与标题
-  z.object({ op: z.literal("setTokens"), tokens: themeTokensSchema.partial() }),
+  z.object({
+    op: z.literal("setTokens"),
+    tokens: themeTokensSchema.partial(),
+    /** 同一 op 携带视觉语言变更(卡片质感/密度/动效),避免额外 op 类型扩散 */
+    visual: themeVisualSchema.partial().optional(),
+  }),
   z.object({ op: z.literal("setSurfaceTitle"), surfaceId: z.string(), title: z.string() }),
   // 数据模型
   z.object({ op: z.literal("upsertDataModel"), model: dataModelDefinitionSchema }),
@@ -321,9 +330,13 @@ export function applyIRops(doc: IRDocument, ops: IROperation[]): IRDocument {
         newParent.children.splice(idx, 0, op.id);
         break;
       }
-      case "setTokens":
+      case "setTokens": {
+        // 防御:历史文档可能整体缺省 theme(读口已统一补默认,契约层被直调时仍自保)
+        next.theme = next.theme ?? { preset: "shadcn", tokens: {} as ThemeTokens, visual: {} as ThemeVisual };
         next.theme.tokens = { ...next.theme.tokens, ...op.tokens };
+        if (op.visual) next.theme.visual = { ...next.theme.visual, ...op.visual };
         break;
+      }
       case "defineComponent": {
         // 从 surface 提取 rootId 子树快照(或使用显式快照),存入 componentDefs
         const s = next.surfaces[op.surfaceId];
@@ -423,9 +436,22 @@ function invertOne(cur: IRDocument, op: IROperation): IROperation | null {
       return { op: "moveNode", surfaceId: op.surfaceId, id: op.id, newParentId: oldParentId, index: oldIndex };
     }
     case "setTokens": {
+      // 防御:历史 revision 可能整体缺省 theme.tokens/visual(commandService 读口已统一补默认,
+      // 但契约层被直接调用时仍需自保)——否则在 undefined 上取值崩溃,整批提交回滚失败
+      const curTokens = cur.theme?.tokens ?? {};
+      const curVisual = cur.theme?.visual ?? {};
       const restore: Record<string, string | number> = {};
-      for (const k of Object.keys(op.tokens)) restore[k] = cur.theme.tokens[k as keyof ThemeTokens];
-      return { op: "setTokens", tokens: restore as Partial<ThemeTokens> };
+      for (const k of Object.keys(op.tokens)) restore[k] = curTokens[k as keyof ThemeTokens] as string | number;
+      // 视觉语言同步逆运算:按 op 携带的键回滚旧值
+      const restoreVisual: Record<string, unknown> = {};
+      for (const k of Object.keys(op.visual ?? {})) {
+        restoreVisual[k] = curVisual[k as keyof ThemeVisual];
+      }
+      return {
+        op: "setTokens",
+        tokens: restore as Partial<ThemeTokens>,
+        ...(op.visual ? { visual: restoreVisual as Partial<ThemeVisual> } : {}),
+      };
     }
     case "setSurfaceTitle": {
       const s = cur.surfaces[op.surfaceId];

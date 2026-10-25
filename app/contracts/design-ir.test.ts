@@ -1,13 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { applyIRops, invertIRops, resolveInstances, validateIR, type IRDocument, type IROperation } from "./design-ir";
+import { DEFAULT_TOKENS, DEFAULT_VISUAL } from "./a2ui";
 
 function sampleDoc(): IRDocument {
   return {
     revision: 3,
-    theme: { preset: "shadcn", tokens: {
-      primary: "#18181b", background: "#ffffff", surface: "#f4f4f5",
-      text: "#09090b", mutedText: "#71717a", accent: "#2563eb", radius: 10, font: "",
-    } },
+    theme: { preset: "shadcn", tokens: DEFAULT_TOKENS, visual: DEFAULT_VISUAL },
     surfaces: {
       frame_home: {
         id: "frame_home",
@@ -67,6 +65,33 @@ describe("invertIRops(撤销回滚)", () => {
     const restored = applyIRops(after, inverses);
     expect(restored.surfaces.frame_home).toEqual(before.surfaces.frame_home);
     expect(restored.theme.tokens).toEqual(before.theme.tokens);
+  });
+
+  it("setTokens 携带 visual 时,逆运算回滚视觉语言", () => {
+    const before = sampleDoc();
+    const ops: IROperation[] = [
+      { op: "setTokens", tokens: { background: "#0b0b0f", text: "#f4f4f5" }, visual: { cardStyle: "glass", density: "compact", motion: "none" } },
+    ];
+    const after = applyIRops(before, ops);
+    expect(after.theme.visual.cardStyle).toBe("glass");
+    expect(after.theme.tokens.background).toBe("#0b0b0f");
+    const restored = applyIRops(after, invertIRops(before, ops));
+    expect(restored.theme.tokens).toEqual(before.theme.tokens);
+    expect(restored.theme.visual).toEqual(before.theme.visual);
+  });
+
+  it("旧文档缺 theme.visual:setTokens(visual) 的正/逆运算不崩溃(回归:提交崩溃根因)", () => {
+    // 模拟风格字段上线前存库的文档:theme 整体缺省 visual
+    const legacy = sampleDoc() as IRDocument;
+    delete (legacy.theme as { visual?: unknown }).visual;
+    const ops: IROperation[] = [
+      { op: "setTokens", tokens: {}, visual: { cardStyle: "clay" } },
+    ];
+    expect(() => applyIRops(legacy, ops)).not.toThrow();
+    const after = applyIRops(legacy, ops);
+    expect(after.theme.visual.cardStyle).toBe("clay");
+    // invertIRops 在 cur.theme.visual=undefined 上取值时曾直接崩溃 → run.failed
+    expect(() => invertIRops(legacy, ops)).not.toThrow();
   });
 
   it("removeNode 的逆操作带完整子树与位置", () => {

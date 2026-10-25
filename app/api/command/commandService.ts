@@ -2,12 +2,14 @@ import { and, desc, eq } from "drizzle-orm";
 import {
   applyIRops,
   invertIRops,
+  irThemeSchema,
   validateIR,
   type DesignScope,
   type IRDocument,
   type IROperation,
   type OpsBatch,
 } from "@contracts/design-ir";
+import { DEFAULT_TOKENS, DEFAULT_VISUAL } from "@contracts/a2ui";
 import { getDb } from "../queries/connection";
 import {
   frames,
@@ -64,7 +66,25 @@ export function loadHead(projectId: number): HeadState | null {
     .limit(1)
     .get() as ProjectRevision | undefined;
   if (!row) return null;
-  return { revision: row.revision, doc: JSON.parse(row.irDoc) as IRDocument };
+  return { revision: row.revision, doc: parseIrDoc(row.irDoc) };
+}
+
+/**
+ * 解析并规范化存库的 IR 文档(所有读事实源的入口统一走这里)。
+ * 向后兼容:令牌/视觉语言升级后,历史 revision 里缺少新增字段(theme.visual/tokens 缺省)。
+ * 用 schema 默认值补全(而非让下游各自兜底):否则 commitRunChanges 里
+ * invertIRops 读 cur.theme.visual.cardStyle 会在 undefined 上取值直接崩溃 →
+ * Run 提交阶段整批失败(run.failed),画布永远收不到已提交页面。
+ * 这也是「前端渲染了但画布不联动」的静默根因之一。
+ */
+function parseIrDoc(irDoc: string): IRDocument {
+  const raw = JSON.parse(irDoc) as IRDocument;
+  const theme = irThemeSchema.parse({
+    preset: raw.theme?.preset ?? "shadcn",
+    tokens: { ...(raw.theme?.tokens ?? {}) },
+    visual: { ...(raw.theme?.visual ?? {}) },
+  });
+  return { ...raw, theme };
 }
 
 /** 初始化 revision 0(幂等:已存在则直接返回当前 head) */
@@ -166,7 +186,7 @@ export function commitOpsBatch(input: CommitInput): CommitResult {
     if (headRevision !== input.baseRevision) {
       throw new RevisionConflictError(input.baseRevision, headRevision);
     }
-    const beforeDoc: IRDocument = head ? JSON.parse(head.irDoc) : emptyDoc();
+    const beforeDoc: IRDocument = head ? parseIrDoc(head.irDoc) : emptyDoc();
     assertOpsTargetsExist(beforeDoc, input.ops);
     const nextDoc = applyIRops(beforeDoc, input.ops);
     nextDoc.revision = headRevision + 1;
@@ -229,10 +249,7 @@ export function commitOpsBatch(input: CommitInput): CommitResult {
 }
 
 function emptyDoc(): IRDocument {
-  return { revision: 0, theme: { preset: "shadcn", tokens: {
-    primary: "#18181b", background: "#ffffff", surface: "#f4f4f5",
-    text: "#09090b", mutedText: "#71717a", accent: "#2563eb", radius: 10, font: "",
-  } }, surfaces: {}, dataModels: {}, componentDefs: {} };
+  return { revision: 0, theme: { preset: "shadcn", tokens: DEFAULT_TOKENS, visual: DEFAULT_VISUAL }, surfaces: {}, dataModels: {}, componentDefs: {} };
 }
 
 function latestUndoneAwareBatch(tx: Tx, projectId: number, filter?: (b: OpBatchRow) => boolean): OpBatchRow | undefined {
@@ -280,7 +297,7 @@ export function undoBatch(projectId: number, batchId?: string): { revision: numb
       .orderBy(desc(projectRevisions.revision))
       .limit(1)
       .get() as ProjectRevision | undefined;
-    const doc = head ? (JSON.parse(head.irDoc) as IRDocument) : emptyDoc();
+    const doc = head ? parseIrDoc(head.irDoc) : emptyDoc();
     const next = applyInverse(tx, batch, doc, head?.revision ?? -1);
     tx.update(opBatches).set({ undone: true }).where(eq(opBatches.id, batch.id)).run();
     return { revision: next.revision };
@@ -307,7 +324,7 @@ export function redoBatch(projectId: number): { revision: number } {
       .orderBy(desc(projectRevisions.revision))
       .limit(1)
       .get() as ProjectRevision | undefined;
-    const doc = head ? (JSON.parse(head.irDoc) as IRDocument) : emptyDoc();
+    const doc = head ? parseIrDoc(head.irDoc) : emptyDoc();
     const ops = JSON.parse(batch.ops) as IROperation[];
     const nextDoc = applyIRops(doc, ops);
     nextDoc.revision = (head?.revision ?? -1) + 1;
@@ -360,7 +377,7 @@ export function rollbackRun(projectId: number, runId: string): { revision: numbe
       .orderBy(desc(projectRevisions.revision))
       .limit(1)
       .get() as ProjectRevision | undefined;
-    let doc = head ? (JSON.parse(head.irDoc) as IRDocument) : emptyDoc();
+    let doc = head ? parseIrDoc(head.irDoc) : emptyDoc();
     let revision = head?.revision ?? -1;
     for (const batch of runBatches) {
       doc = applyInverse(tx, batch, doc, revision);
@@ -429,7 +446,7 @@ export function restoreSnapshot(projectId: number, snapshotId: number, baseRevis
     if ((head?.revision ?? -1) !== baseRevision) {
       throw new RevisionConflictError(baseRevision, head?.revision ?? -1);
     }
-    const doc = JSON.parse(snapRev.irDoc) as IRDocument;
+    const doc = parseIrDoc(snapRev.irDoc);
     doc.revision = (head?.revision ?? -1) + 1;
     tx.insert(projectRevisions)
       .values({
@@ -489,7 +506,7 @@ export function commitRunChanges(
     if (headRevision !== input.baseRevision) {
       throw new RevisionConflictError(input.baseRevision, headRevision);
     }
-    const beforeDoc: IRDocument = head ? JSON.parse(head.irDoc) : emptyDoc();
+    const beforeDoc: IRDocument = head ? parseIrDoc(head.irDoc) : emptyDoc();
     assertOpsTargetsExist(beforeDoc, input.ops);
     const nextDoc = applyIRops(beforeDoc, input.ops);
     nextDoc.revision = headRevision + 1;
